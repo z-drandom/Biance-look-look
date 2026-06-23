@@ -107,11 +107,10 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 
 <!-- ── GLOBAL INDICATOR BAR ── -->
 <div id="ind-bar">
-  <!-- 3-way MA type toggle -->
+  <!-- independent TEMA / MA toggles (both can be on) -->
   <div class="ma-grp">
-    <button class="ma-btn on" data-t="ema" onclick="switchMAType('ema')">EMA</button>
-    <button class="ma-btn"   data-t="tema" onclick="switchMAType('tema')">TEMA</button>
-    <button class="ma-btn"   data-t="ma"   onclick="switchMAType('ma')">MA</button>
+    <button class="ma-btn on" data-t="tema" onclick="toggleMA('tema')">TEMA</button>
+    <button class="ma-btn"   data-t="ma"   onclick="toggleMA('ma')">MA</button>
   </div>
   <div class="isep"></div>
   <!-- shared indicator chips -->
@@ -134,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div class="grow">
     <span class="gl">类型</span>
     <select class="gsel" id="g-type" onchange="onGTypeChange()">
-      <option value="ma-type">EMA / TEMA / MA（跟随顶部切换）</option>
+      <option value="ma-line">均线 TEMA/MA（跟随顶部开关）</option>
       <option value="bb">布林带 BB</option>
       <option value="vwap">VWAP</option>
       <option value="vpvr">VPVR（成交量分布）</option>
@@ -165,7 +164,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 // ══════════════════════════════════════════════
 const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
 const TFS=['1m','3m','5m','15m','30m','1h','2h','4h','6h','12h','1d','3d','1w'];
-const PANEL_TFS=['5m','1h','15m','1d'];
+const PANEL_TFS=['3m','15m','1h','6h']; // 左上 右上 左下 右下
 
 // EMA ramp: 6 steps light→prominent (color, lineWidth, chip font-size)
 const EMA_RAMP=[
@@ -185,12 +184,12 @@ const PALETTE=['#00bcd4','#ab47bc','#8bc34a','#e91e63','#795548','#ff9800'];
 let _uid=1; const uid=()=>'i'+(_uid++);
 let _pidx=0; const nxtColor=()=>PALETTE[(_pidx++)%PALETTE.length];
 
-// maType: current active type for all "ma-type" indicators
-let maType='ema';
+// maToggle: independent on/off for TEMA and MA (both可同时存在)
+let maToggle={tema:true, ma:false};
 
 // sharedInds: single source of truth for ALL panels
-// type can be 'ma-type' (follows maType), 'bb', 'vwap', 'vpvr'
-// ma-type inds have .p (period)
+// type can be 'ma-line' (drawn as TEMA实线 and/or MA虚线), 'bb', 'vwap', 'vpvr'
+// ma-line inds have .p (period)
 let sharedInds=[];
 
 const POP={indId:null,mode:'add'};
@@ -203,17 +202,17 @@ const panels=[]; // per-panel chart state (no ind ownership)
 function initSharedInds(){
   sharedInds=[];
   EMA_PERIODS.forEach((p,i)=>{
-    sharedInds.push({id:uid(),type:'ma-type',p,color:EMA_RAMP[i].color,lw:EMA_RAMP[i].lw,fs:EMA_RAMP[i].fs});
+    sharedInds.push({id:uid(),type:'ma-line',p,color:EMA_RAMP[i].color,lw:EMA_RAMP[i].lw,fs:EMA_RAMP[i].fs});
   });
   sharedInds.push({id:uid(),type:'vpvr',rows:100,width:18,color:'#2962ff',fs:10});
 }
 
 // ══════════════════════════════════════════════
-// MA TYPE SWITCH (one click, all panels)
+// MA TOGGLE (TEMA / MA independent, all panels)
 // ══════════════════════════════════════════════
-function switchMAType(t){
-  maType=t;
-  document.querySelectorAll('.ma-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+function toggleMA(t){
+  maToggle[t]=!maToggle[t];
+  document.querySelector(`.ma-btn[data-t="${t}"]`)?.classList.toggle('on',maToggle[t]);
   redrawAllPanels();
   renderSharedChips();
 }
@@ -269,15 +268,12 @@ function hexRgba(hex,op){
 }
 function autoStyle(p){const t=Math.min(1,Math.log10(p+1)/Math.log10(2001));return{lw:.5+t*2.2,op:.3+t*.7};}
 
-// resolve actual calc type from indicator
-function resolveType(ind){return ind.type==='ma-type'?maType:ind.type;}
 function indLabel(ind){
-  const t=resolveType(ind);
-  if(t==='ema'||t==='tema'||t==='ma') return `${t.toUpperCase()}${ind.p}`;
-  if(t==='bb')   return `BB(${ind.p},${ind.m||2})`;
-  if(t==='vwap') return 'VWAP';
-  if(t==='vpvr') return 'VPVR';
-  return t.toUpperCase();
+  if(ind.type==='ma-line') return `${ind.p}`;
+  if(ind.type==='bb')   return `BB(${ind.p},${ind.m||2})`;
+  if(ind.type==='vwap') return 'VWAP';
+  if(ind.type==='vpvr') return 'VPVR';
+  return ind.type.toUpperCase();
 }
 
 // ══════════════════════════════════════════════
@@ -343,7 +339,7 @@ function schedVPVR(pi){
 // SHARED CHIPS (top bar)
 // ══════════════════════════════════════════════
 function chipSortKey(ind){
-  if(ind.type==='ma-type')return ind.p;
+  if(ind.type==='ma-line')return ind.p;
   if(ind.type==='bb')return 5000;
   if(ind.type==='vwap')return 6000;
   if(ind.type==='vpvr')return 9999;
@@ -421,7 +417,11 @@ async function loadPanel(pi){
     p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
     p.candleSeries.setData(candles);
     p.chart.timeScale().fitContent();
-    p.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>schedVPVR(pi));
+    p.chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
+      schedVPVR(pi);
+      // 拖到最左侧附近时自动加载更早的历史K线
+      if(range && range.from < 20) loadMoreHistory(pi);
+    });
     p.seriesMap={};
     drawAllInds(pi);
     p.chart.subscribeCrosshairMove(param=>onCross(pi,param));
@@ -444,18 +444,19 @@ function drawAllInds(pi){
   for(const s of Object.values(p.seriesMap||{})){try{p.chart.removeSeries(s);}catch(_){}}
   p.seriesMap={};
   for(const ind of sharedInds){
-    const rtype=resolveType(ind);
-    if(rtype==='vpvr')continue;
+    if(ind.type==='vpvr')continue;
     const lw=ind.lw||(ind.p?autoStyle(ind.p).lw:1.5);
     const col=ind.color;
-    const ln=(c=col,w=lw)=>p.chart.addLineSeries({color:c,lineWidth:w,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
-    if(rtype==='ema'){
-      const s=ln();s.setData(toLD(calcEMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
-    }else if(rtype==='tema'){
-      const s=ln();s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
-    }else if(rtype==='ma'){
-      const s=ln();s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
-    }else if(rtype==='bb'){
+    const ln=(c=col,w=lw,style=0)=>p.chart.addLineSeries({color:c,lineWidth:w,lineStyle:style,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+    if(ind.type==='ma-line'){
+      // TEMA = 实线, MA = 虚线; 两者可同时显示
+      if(maToggle.tema){
+        const s=ln(col,lw,0);s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id+'_tema']=s;
+      }
+      if(maToggle.ma){
+        const s=ln(col,lw,2);s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id+'_ma']=s;
+      }
+    }else if(ind.type==='bb'){
       const b=calcBB(closes,ind.p,ind.m||2);
       const sm=ln(col,lw),su=ln(hexRgba(col,.5),Math.max(.5,lw-.4)),sl=ln(hexRgba(col,.5),Math.max(.5,lw-.4));
       sm.setData(toLD(b.mid,times));su.setData(toLD(b.up,times));sl.setData(toLD(b.lo,times));
@@ -469,6 +470,40 @@ function drawAllInds(pi){
 
 function redrawAllPanels(){
   panels.forEach((_,i)=>drawAllInds(i));
+}
+
+// ══════════════════════════════════════════════
+// INFINITE HISTORY (拖到最左继续加载更早的K线)
+// ══════════════════════════════════════════════
+async function loadMoreHistory(pi){
+  const p=panels[pi];
+  if(p.loadingMore||p.noMore||!p.candles?.length)return;
+  p.loadingMore=true;
+  try{
+    const oldest=p.candles[0];
+    const endTime=oldest.time*1000-1;
+    const r=await fetch(`${REST}/klines?symbol=${SYM}&interval=${p.tf}&limit=1000&endTime=${endTime}`);
+    const raw=await r.json();
+    if(!raw.length){p.noMore=true;return;}
+    const older=raw.map(pk).filter(c=>c.time<oldest.time);
+    if(!older.length){p.noMore=true;return;}
+
+    // 记录当前可视逻辑范围，prepend后按新增数量平移以保持画面不跳动
+    const ts=p.chart.timeScale();
+    const before=ts.getVisibleLogicalRange();
+    const added=older.length;
+
+    p.candles=[...older,...p.candles];
+    p.candleSeries.setData(p.candles);
+    drawAllInds(pi);
+
+    if(before){
+      ts.setVisibleLogicalRange({from:before.from+added, to:before.to+added});
+    }
+  }catch(_){
+  }finally{
+    p.loadingMore=false;
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -506,7 +541,7 @@ function openPopAdd(anchor){
   POP.indId=null;POP.mode='add';
   document.getElementById('gpop-title').textContent='添加指标（全面板）';
   document.getElementById('gpop-btn').textContent='添加';
-  document.getElementById('g-type').value='ma-type';
+  document.getElementById('g-type').value='ma-line';
   document.getElementById('g-type').disabled=false;
   document.getElementById('g-period').value='21';
   document.getElementById('g-mult').value='2';
@@ -554,7 +589,7 @@ function commitPop(){
   const width=parseInt(document.getElementById('g-vw').value)||18;
   if(POP.mode==='add'){
     const ind={id:uid(),type,color,fs:10};
-    if(type==='ma-type'){ind.p=Math.max(1,Math.min(2000,period));}
+    if(type==='ma-line'){ind.p=Math.max(1,Math.min(2000,period));}
     if(type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
     if(type==='vpvr'){ind.rows=rows;ind.width=width;}
     _pidx++;
@@ -563,7 +598,7 @@ function commitPop(){
     const ind=sharedInds.find(i=>i.id===POP.indId);
     if(ind){
       ind.color=color;ind.lw=undefined;
-      if(ind.type==='ma-type')ind.p=Math.max(1,Math.min(2000,period));
+      if(ind.type==='ma-line')ind.p=Math.max(1,Math.min(2000,period));
       if(ind.type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
       if(ind.type==='vpvr'){ind.rows=rows;ind.width=width;}
     }
@@ -603,7 +638,7 @@ function subKline(pi){
         const c={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v};
         const last=p.candles[p.candles.length-1];
         if(last&&last.time===c.time)p.candles[p.candles.length-1]=c;
-        else if(!last||c.time>last.time){p.candles.push(c);if(p.candles.length>2100)p.candles.shift();}
+        else if(!last||c.time>last.time){p.candles.push(c);}
         if(p.candleSeries)p.candleSeries.update(c);
         if(k.x)drawAllInds(pi);
         updatePP(pi);schedVPVR(pi);retry=1000;
