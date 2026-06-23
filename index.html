@@ -6,11 +6,11 @@
 <title>BTC 看盘</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-:root {
-  --bg:#131722; --bg2:#1e222d; --bg3:#2a2e39; --border:#363c4e;
-  --text:#d1d4dc; --text2:#787b86;
-  --green:#26a69a; --red:#ef5350; --blue:#2962ff;
-  --yellow:#f9a825; --purple:#ab47bc; --orange:#ff9800;
+:root{
+  --bg:#131722;--bg2:#1e222d;--bg3:#2a2e39;--border:#363c4e;
+  --text:#d1d4dc;--text2:#787b86;
+  --green:#26a69a;--red:#ef5350;--blue:#2962ff;
+  --yellow:#f9a825;--orange:#ff9800;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
@@ -18,47 +18,57 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 
 /* ── HEADER ── */
 #hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;gap:14px;height:46px;flex-shrink:0}
-#logo{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.2px;white-space:nowrap}
+#logo{font-size:14px;font-weight:700;color:#fff;white-space:nowrap}
 #lp{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
-#lp.up{color:var(--green)} #lp.dn{color:var(--red)}
+#lp.up{color:var(--green)}#lp.dn{color:var(--red)}
 #pc{font-size:11px;font-weight:600;padding:2px 7px;border-radius:3px}
-#pc.up{background:rgba(38,166,154,.18);color:var(--green)} #pc.dn{background:rgba(239,83,80,.18);color:var(--red)}
-.hstat{display:flex;flex-direction:column}
-.hstat-l{color:var(--text2);font-size:9px;text-transform:uppercase;letter-spacing:.4px}
-.hstat-v{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+#pc.up{background:rgba(38,166,154,.18);color:var(--green)}#pc.dn{background:rgba(239,83,80,.18);color:var(--red)}
+.hst{display:flex;flex-direction:column}
+.hst-l{color:var(--text2);font-size:9px;text-transform:uppercase;letter-spacing:.4px}
+.hst-v{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
 #dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite;margin-left:auto;flex-shrink:0}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
+/* ── GLOBAL INDICATOR BAR ── */
+#ind-bar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 10px;height:30px;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;overflow:hidden;
+}
+
+/* MA type 3-way toggle */
+.ma-grp{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
+.ma-btn{padding:0 9px;height:20px;background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:700;transition:all .12s;letter-spacing:.2px}
+.ma-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.ma-btn.on{background:var(--blue);color:#fff}
+
+.isep{width:1px;height:18px;background:var(--border);flex-shrink:0}
+
+/* shared chips */
+#sh-chips{display:flex;gap:3px;flex:1;align-items:center;overflow:hidden;min-width:0}
+.chip{display:flex;align-items:center;border-radius:2px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid transparent;line-height:1}
+.chip:hover{filter:brightness(1.3)}
+.chip .cl{padding:1px 4px}
+.chip .cx{padding:1px 3px 1px 0;opacity:.4;cursor:pointer;font-size:9px}
+.chip .cx:hover{opacity:1;color:var(--red)}
+.add-ind{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:13px;padding:0 6px;height:20px;display:flex;align-items:center;flex-shrink:0}
+.add-ind:hover{border-color:var(--blue);color:var(--blue)}
+
 /* ── 2×2 GRID ── */
 #grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden}
-.pnl{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.pnl{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 
 /* ── PANEL TOOLBAR ── */
-.ptb{display:flex;align-items:center;gap:3px;padding:0 5px;background:var(--bg2);border-bottom:1px solid var(--border);height:28px;flex-shrink:0;overflow:hidden}
-.tf-sel{background:transparent;border:none;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;outline:none;padding:0 2px;-webkit-appearance:none;flex-shrink:0}
+.ptb{display:flex;align-items:center;gap:4px;padding:0 6px;background:var(--bg2);border-bottom:1px solid var(--border);height:26px;flex-shrink:0}
+.tf-sel{background:transparent;border:none;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;outline:none;-webkit-appearance:none;flex-shrink:0}
 .tf-sel option{background:var(--bg3)}
-
-/* view-mode buttons (Log / Invert) */
-.vm-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:9px;font-weight:700;padding:0 4px;height:16px;line-height:16px;flex-shrink:0;transition:all .12s;letter-spacing:.3px}
+.vm-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:9px;font-weight:700;padding:0 4px;height:16px;line-height:16px;flex-shrink:0;transition:all .12s}
 .vm-btn:hover{border-color:#888;color:var(--text)}
 .vm-btn.on{background:rgba(41,98,255,.25);border-color:var(--blue);color:var(--blue)}
-
-.sep{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 1px}
-
-.ind-chips{display:flex;gap:3px;flex:1;overflow:hidden;align-items:center;min-width:0}
-.chip{display:flex;align-items:center;border-radius:2px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid transparent;transition:filter .1s;line-height:1}
-.chip:hover{filter:brightness(1.3)}
-.chip .clabel{padding:1px 4px}
-.chip .x{padding:1px 3px 1px 0;opacity:.45;cursor:pointer}
-.chip .x:hover{opacity:1;color:var(--red)}
-
-.add-ind{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:13px;line-height:1;padding:0 5px;height:18px;display:flex;align-items:center;flex-shrink:0}
-.add-ind:hover{border-color:var(--blue);color:var(--blue)}
 .pp{margin-left:auto;font-size:10px;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap;flex-shrink:0}
 
 /* ── CHART WRAPPER ── */
 .cw{flex:1;position:relative;overflow:hidden}
-.cw canvas{display:block}
 .ldg{position:absolute;inset:0;background:rgba(19,23,34,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
 .sp{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -68,37 +78,48 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 #gpop.show{display:flex}
 #gpop h4{font-size:12px;font-weight:700;color:var(--text)}
 .grow{display:flex;align-items:center;gap:8px}
-.gl{color:var(--text2);font-size:11px;width:50px;flex-shrink:0}
+.gl{color:var(--text2);font-size:11px;width:52px;flex-shrink:0}
 .gsel,.ginp{background:#2a2e39;border:1px solid #363c4e;color:var(--text);border-radius:3px;padding:3px 7px;font-size:12px;outline:none;flex:1}
 .gsel:focus,.ginp:focus{border-color:var(--blue)}
 .ginp{width:80px;flex:none}
 .gbtn{padding:5px 14px;background:var(--blue);border:none;color:#fff;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600}
 .gbtn:hover{background:#1e53e5}
-.gbtn-sec{padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:3px;cursor:pointer;font-size:11px}
-.gbtn-sec:hover{border-color:var(--blue);color:var(--blue)}
 .gcl{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:0}
 .gcl:hover{color:var(--text)}
 .vrow{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
 .vrow input[type=range]{flex:1;accent-color:var(--blue)}
 .vrow .vv{color:var(--text);font-weight:600;width:28px;text-align:right}
-.pop-btns{display:flex;gap:6px;align-items:center;margin-top:2px}
-.gdivider{height:1px;background:var(--border);margin:2px 0}
 </style>
 </head>
 <body>
 
+<!-- ── HEADER ── -->
 <div id="hdr">
   <div id="logo">₿ BTC/USDT</div>
-  <span id="lp">--</span>
-  <span id="pc">--</span>
-  <div class="hstat"><span class="hstat-l">24H 高</span><span class="hstat-v" id="shi" style="color:var(--green)">--</span></div>
-  <div class="hstat"><span class="hstat-l">24H 低</span><span class="hstat-v" id="slo" style="color:var(--red)">--</span></div>
-  <div class="hstat"><span class="hstat-l">24H 量</span><span class="hstat-v" id="svol">--</span></div>
-  <div class="hstat"><span class="hstat-l">资金费率</span><span class="hstat-v" id="sfr">--</span></div>
-  <div class="hstat"><span class="hstat-l">未平仓</span><span class="hstat-v" id="soi">--</span></div>
+  <span id="lp">--</span><span id="pc">--</span>
+  <div class="hst"><span class="hst-l">24H 高</span><span class="hst-v" id="shi" style="color:var(--green)">--</span></div>
+  <div class="hst"><span class="hst-l">24H 低</span><span class="hst-v" id="slo" style="color:var(--red)">--</span></div>
+  <div class="hst"><span class="hst-l">24H 量</span><span class="hst-v" id="svol">--</span></div>
+  <div class="hst"><span class="hst-l">资金费率</span><span class="hst-v" id="sfr">--</span></div>
+  <div class="hst"><span class="hst-l">未平仓</span><span class="hst-v" id="soi">--</span></div>
   <div id="dot"></div>
 </div>
 
+<!-- ── GLOBAL INDICATOR BAR ── -->
+<div id="ind-bar">
+  <!-- 3-way MA type toggle -->
+  <div class="ma-grp">
+    <button class="ma-btn on" data-t="ema" onclick="switchMAType('ema')">EMA</button>
+    <button class="ma-btn"   data-t="tema" onclick="switchMAType('tema')">TEMA</button>
+    <button class="ma-btn"   data-t="ma"   onclick="switchMAType('ma')">MA</button>
+  </div>
+  <div class="isep"></div>
+  <!-- shared indicator chips -->
+  <div id="sh-chips"></div>
+  <button class="add-ind" id="global-add-btn" onclick="openPopAdd(this)">+</button>
+</div>
+
+<!-- ── 2×2 GRID ── -->
 <div id="grid">
   <div class="pnl" id="pnl-0"></div>
   <div class="pnl" id="pnl-1"></div>
@@ -106,22 +127,19 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div class="pnl" id="pnl-3"></div>
 </div>
 
-<!-- GLOBAL INDICATOR POPOVER -->
+<!-- ── GLOBAL POPOVER ── -->
 <div id="gpop">
   <button class="gcl" onclick="closePop()">✕</button>
   <h4 id="gpop-title">添加指标</h4>
-
   <div class="grow">
     <span class="gl">类型</span>
     <select class="gsel" id="g-type" onchange="onGTypeChange()">
-      <option value="ema">EMA</option>
-      <option value="tema">TEMA</option>
+      <option value="ma-type">EMA / TEMA / MA（跟随顶部切换）</option>
       <option value="bb">布林带 BB</option>
       <option value="vwap">VWAP</option>
       <option value="vpvr">VPVR（成交量分布）</option>
     </select>
   </div>
-
   <div id="g-period-row" class="grow">
     <span class="gl">周期</span>
     <input class="ginp" id="g-period" type="number" min="1" max="2000" value="21">
@@ -134,445 +152,349 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
     <span class="gl">颜色</span>
     <input type="color" id="g-color" value="#2962ff" style="width:60px;height:24px;border:none;background:none;cursor:pointer;padding:0">
   </div>
-
   <div id="g-vpvr-opts" style="display:none;flex-direction:column;gap:7px">
     <div class="vrow">行数<input type="range" id="g-vrows" min="10" max="200" value="100" oninput="document.getElementById('g-vrows-v').textContent=this.value"><span class="vv" id="g-vrows-v">100</span></div>
     <div class="vrow">宽度%<input type="range" id="g-vw" min="5" max="45" value="18" oninput="document.getElementById('g-vw-v').textContent=this.value"><span class="vv" id="g-vw-v">18</span></div>
   </div>
-
-  <!-- edit-only: swap EMA↔TEMA -->
-  <div id="g-swap-row" style="display:none">
-    <div class="gdivider"></div>
-    <div style="margin-top:4px">
-      <button class="gbtn-sec" id="g-swap-btn" onclick="swapEmaThema()">切换为 TEMA</button>
-      <span id="g-swap-hint" style="color:var(--text2);font-size:10px;margin-left:6px">保留周期和颜色</span>
-    </div>
-  </div>
-
-  <div class="pop-btns">
-    <button class="gbtn" id="gpop-btn" onclick="commitPop()">添加</button>
-  </div>
+  <button class="gbtn" id="gpop-btn" onclick="commitPop()">添加</button>
 </div>
 
 <script>
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // CONSTANTS
-// ══════════════════════════════════════
-const SYM  = 'BTCUSDT';
-const REST = 'https://api.binance.com/api/v3';
-const FAPI = 'https://fapi.binance.com/fapi/v1';
-const TFS  = ['1m','3m','5m','15m','30m','1h','2h','4h','6h','12h','1d','3d','1w'];
+// ══════════════════════════════════════════════
+const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
+const TFS=['1m','3m','5m','15m','30m','1h','2h','4h','6h','12h','1d','3d','1w'];
+const PANEL_TFS=['5m','1h','15m','1d'];
 
-// 6-step gradient for EMA25→600: cool/light → warm/prominent
-// Each entry: [hex color, line width, chip font-size px]
-const EMA_RAMP = [
-  { color:'#6db3f2', lw:0.7,  fs:9  },  // EMA25
-  { color:'#4d88e8', lw:1.0,  fs:9.5},  // EMA99
-  { color:'#2962ff', lw:1.45, fs:10 },  // EMA200
-  { color:'#e8b020', lw:1.85, fs:10.5}, // EMA288
-  { color:'#e07020', lw:2.3,  fs:11 },  // EMA400
-  { color:'#d43535', lw:2.8,  fs:11.5}, // EMA600
+// EMA ramp: 6 steps light→prominent (color, lineWidth, chip font-size)
+const EMA_RAMP=[
+  {color:'#6db3f2',lw:.7, fs:9},
+  {color:'#4d88e8',lw:1.0,fs:9.5},
+  {color:'#2962ff',lw:1.45,fs:10},
+  {color:'#e8b020',lw:1.85,fs:10.5},
+  {color:'#e07020',lw:2.3, fs:11},
+  {color:'#d43535',lw:2.8, fs:11.5},
 ];
-const EMA_PERIODS = [25, 99, 200, 288, 400, 600];
+const EMA_PERIODS=[25,99,200,288,400,600];
+const PALETTE=['#00bcd4','#ab47bc','#8bc34a','#e91e63','#795548','#ff9800'];
 
-// fallback palette for user-added indicators
-const PALETTE = ['#00bcd4','#ab47bc','#8bc34a','#e91e63','#795548','#ff9800','#2962ff'];
+// ══════════════════════════════════════════════
+// GLOBAL STATE
+// ══════════════════════════════════════════════
+let _uid=1; const uid=()=>'i'+(_uid++);
+let _pidx=0; const nxtColor=()=>PALETTE[(_pidx++)%PALETTE.length];
 
-// default VPVR config
-const DEF_VPVR = { type:'vpvr', rows:100, width:18 };
+// maType: current active type for all "ma-type" indicators
+let maType='ema';
 
-// ── build default indicator list (EMA ramp + VPVR) ──
-function buildDefaultInds() {
-  const list = EMA_PERIODS.map((p, i) => ({
-    id: uid(), type:'ema', p,
-    color: EMA_RAMP[i].color,
-    lw:    EMA_RAMP[i].lw,
-    fs:    EMA_RAMP[i].fs,
-  }));
-  list.push({ id:uid(), type:'vpvr', rows:DEF_VPVR.rows, width:DEF_VPVR.width, color:'#2962ff' });
-  return list;
+// sharedInds: single source of truth for ALL panels
+// type can be 'ma-type' (follows maType), 'bb', 'vwap', 'vpvr'
+// ma-type inds have .p (period)
+let sharedInds=[];
+
+const POP={indId:null,mode:'add'};
+
+const panels=[]; // per-panel chart state (no ind ownership)
+
+// ══════════════════════════════════════════════
+// INIT SHARED INDS
+// ══════════════════════════════════════════════
+function initSharedInds(){
+  sharedInds=[];
+  EMA_PERIODS.forEach((p,i)=>{
+    sharedInds.push({id:uid(),type:'ma-type',p,color:EMA_RAMP[i].color,lw:EMA_RAMP[i].lw,fs:EMA_RAMP[i].fs});
+  });
+  sharedInds.push({id:uid(),type:'vpvr',rows:100,width:18,color:'#2962ff',fs:10});
 }
 
-const PANEL_TFS = ['5m','1h','15m','1d'];
+// ══════════════════════════════════════════════
+// MA TYPE SWITCH (one click, all panels)
+// ══════════════════════════════════════════════
+function switchMAType(t){
+  maType=t;
+  document.querySelectorAll('.ma-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  redrawAllPanels();
+  renderSharedChips();
+}
 
-// ══════════════════════════════════════
-// STATE
-// ══════════════════════════════════════
-const panels = [];
-let _uid = 1; function uid(){ return 'i'+(_uid++); }
-let _pidx = 0; const nxtColor = () => PALETTE[(_pidx++) % PALETTE.length];
-
-const POP = { pi:-1, indId:null, mode:'add' };
-
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // MATH
-// ══════════════════════════════════════
-function calcEMA(arr, n) {
-  const k=2/(n+1), out=new Array(arr.length).fill(null);
-  let v=null, c=0;
+// ══════════════════════════════════════════════
+function calcEMA(arr,n){
+  const k=2/(n+1),out=new Array(arr.length).fill(null);
+  let v=null,c=0;
   for(let i=0;i<arr.length;i++){
-    if(arr[i]==null) continue;
-    if(v===null){ c++; if(c<n){v=(v||0)+arr[i];}else{v=((v||0)+arr[i])/n;out[i]=v;} }
-    else{ v=arr[i]*k+v*(1-k); out[i]=v; }
+    if(arr[i]==null)continue;
+    if(v===null){c++;if(c<n){v=(v||0)+arr[i];}else{v=((v||0)+arr[i])/n;out[i]=v;}}
+    else{v=arr[i]*k+v*(1-k);out[i]=v;}
   }
   return out;
 }
-function calcTEMA(arr, n){
-  const e1=calcEMA(arr,n), e2=calcEMA(e1,n), e3=calcEMA(e2,n);
-  return arr.map((_,i)=>e1[i]!=null&&e2[i]!=null&&e3[i]!=null ? 3*e1[i]-3*e2[i]+e3[i] : null);
+function calcMA(arr,n){
+  const out=new Array(arr.length).fill(null);
+  for(let i=n-1;i<arr.length;i++){
+    let s=0;for(let j=i-n+1;j<=i;j++)s+=arr[j];
+    out[i]=s/n;
+  }
+  return out;
+}
+function calcTEMA(arr,n){
+  const e1=calcEMA(arr,n),e2=calcEMA(e1,n),e3=calcEMA(e2,n);
+  return arr.map((_,i)=>e1[i]!=null&&e2[i]!=null&&e3[i]!=null?3*e1[i]-3*e2[i]+e3[i]:null);
 }
 function calcBB(c,n=20,m=2){
   const mid=[],up=[],lo=[];
   for(let i=0;i<c.length;i++){
     if(i<n-1){mid.push(null);up.push(null);lo.push(null);continue;}
-    let s=0,s2=0; for(let j=i-n+1;j<=i;j++){s+=c[j];s2+=c[j]*c[j];}
-    const avg=s/n, sd=Math.sqrt(Math.max(0,s2/n-avg*avg));
-    mid.push(avg); up.push(avg+m*sd); lo.push(avg-m*sd);
+    let s=0,s2=0;for(let j=i-n+1;j<=i;j++){s+=c[j];s2+=c[j]*c[j];}
+    const avg=s/n,sd=Math.sqrt(Math.max(0,s2/n-avg*avg));
+    mid.push(avg);up.push(avg+m*sd);lo.push(avg-m*sd);
   }
   return{mid,up,lo};
 }
 function calcVWAP(candles){
-  const out=[]; let cv=0,ctv=0,day=-1;
+  const out=[];let cv=0,ctv=0,day=-1;
   for(const c of candles){
     const d=Math.floor(c.time/86400);
     if(d!==day){day=d;cv=0;ctv=0;}
-    const t=(c.high+c.low+c.close)/3; ctv+=t*c.volume; cv+=c.volume;
+    const t=(c.high+c.low+c.close)/3;ctv+=t*c.volume;cv+=c.volume;
     out.push(cv>0?ctv/cv:null);
   }
   return out;
 }
-
 function hexRgba(hex,op){
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${op})`;
+  return`rgba(${r},${g},${b},${op})`;
 }
-// fallback auto-style when no explicit lw set
-function autoStyle(p){
-  const t=Math.min(1,Math.log10(p+1)/Math.log10(2001));
-  return{lw:0.5+t*2.2, op:0.3+t*0.7};
+function autoStyle(p){const t=Math.min(1,Math.log10(p+1)/Math.log10(2001));return{lw:.5+t*2.2,op:.3+t*.7};}
+
+// resolve actual calc type from indicator
+function resolveType(ind){return ind.type==='ma-type'?maType:ind.type;}
+function indLabel(ind){
+  const t=resolveType(ind);
+  if(t==='ema'||t==='tema'||t==='ma') return `${t.toUpperCase()}${ind.p}`;
+  if(t==='bb')   return `BB(${ind.p},${ind.m||2})`;
+  if(t==='vwap') return 'VWAP';
+  if(t==='vpvr') return 'VPVR';
+  return t.toUpperCase();
 }
 
-// ══════════════════════════════════════
-// FETCH (2000 candles)
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
+// FETCH
+// ══════════════════════════════════════════════
 const pk=k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]});
 async function fetchCandles(tf){
   const r1=await fetch(`${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000`);
-  const d1=await r1.json(); const c1=d1.map(pk);
+  const d1=await r1.json();const c1=d1.map(pk);
   try{
     const r2=await fetch(`${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000&endTime=${d1[0][0]-1}`);
-    const d2=await r2.json(); return [...d2.map(pk),...c1];
+    const d2=await r2.json();return[...d2.map(pk),...c1];
   }catch(_){return c1;}
 }
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // VPVR
-// Highlight: shortest bars (low-volume = thin air / S-R flip zones)
-// No highlight on the tallest bar (POC)
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 function drawVPVR(pi){
   const p=panels[pi];
   const canvas=p.vpvrCanvas;
-  if(!canvas||!p.chart||!p.candles?.length) return;
+  if(!canvas||!p.chart||!p.candles?.length)return;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  const vi=p.inds.find(i=>i.type==='vpvr');
-  if(!vi) return;
-
+  const vi=sharedInds.find(i=>i.type==='vpvr');
+  if(!vi)return;
   const lr=p.chart.timeScale().getVisibleLogicalRange();
-  if(!lr) return;
-  const from=Math.max(0,Math.floor(lr.from)), to=Math.min(p.candles.length-1,Math.ceil(lr.to));
-  const vis=p.candles.slice(from,to+1);
-  if(vis.length<2) return;
-
-  const rows=vi.rows||100, wpct=vi.width||18;
-  const minP=Math.min(...vis.map(c=>c.low));
-  const maxP=Math.max(...vis.map(c=>c.high));
-  const rng=maxP-minP; if(rng===0) return;
-  const rs=rng/rows;
-  const vols=new Array(rows).fill(0);
-
+  if(!lr)return;
+  const from=Math.max(0,Math.floor(lr.from)),to=Math.min(p.candles.length-1,Math.ceil(lr.to));
+  const vis=p.candles.slice(from,to+1);if(vis.length<2)return;
+  const rows=vi.rows||100,wpct=vi.width||18;
+  const minP=Math.min(...vis.map(c=>c.low)),maxP=Math.max(...vis.map(c=>c.high));
+  const rng=maxP-minP;if(rng===0)return;
+  const rs=rng/rows,vols=new Array(rows).fill(0);
   for(const c of vis){
-    const r0=Math.max(0,Math.floor((c.low-minP)/rs));
-    const r1=Math.min(rows-1,Math.floor((c.high-minP)/rs));
-    const cnt=r1-r0+1;
-    for(let r=r0;r<=r1;r++) vols[r]+=c.volume/cnt;
+    const r0=Math.max(0,Math.floor((c.low-minP)/rs)),r1=Math.min(rows-1,Math.floor((c.high-minP)/rs));
+    const cnt=r1-r0+1;for(let r=r0;r<=r1;r++)vols[r]+=c.volume/cnt;
   }
-
   const maxV=Math.max(...vols);
-
-  // pick the 3 shortest non-empty rows to highlight (thin air / weak S-R zones)
   const HIGHLIGHT_N=3;
   const lowRows=new Set(
-    vols.map((v,r)=>({v,r}))
-        .filter(o=>o.v>0)
-        .sort((a,b)=>a.v-b.v)
-        .slice(0,HIGHLIGHT_N)
-        .map(o=>o.r)
+    vols.map((v,r)=>({v,r})).filter(o=>o.v>0).sort((a,b)=>a.v-b.v).slice(0,HIGHLIGHT_N).map(o=>o.r)
   );
-
-  const W=canvas.width, barMaxW=W*wpct/100;
-
+  const W=canvas.width,barMaxW=W*wpct/100;
   for(let r=0;r<rows;r++){
-    if(vols[r]===0) continue;
+    if(vols[r]===0)continue;
     const yBot=p.candleSeries.priceToCoordinate(minP+r*rs);
     const yTop=p.candleSeries.priceToCoordinate(minP+(r+1)*rs);
-    if(yBot==null||yTop==null) continue;
-    const y=Math.min(yBot,yTop), bH=Math.max(1,Math.abs(yBot-yTop)-1);
+    if(yBot==null||yTop==null)continue;
+    const y=Math.min(yBot,yTop),bH=Math.max(1,Math.abs(yBot-yTop)-1);
     const bW=vols[r]/maxV*barMaxW;
-
-    ctx.fillStyle = lowRows.has(r) ? 'rgba(239,83,80,.6)' : 'rgba(41,98,255,.2)';
-    ctx.fillRect(W-bW, y, bW, bH);
+    ctx.fillStyle=lowRows.has(r)?'rgba(239,83,80,.6)':'rgba(41,98,255,.2)';
+    ctx.fillRect(W-bW,y,bW,bH);
   }
 }
-
 function schedVPVR(pi){
   const p=panels[pi];
-  if(p._vraf) cancelAnimationFrame(p._vraf);
+  if(p._vraf)cancelAnimationFrame(p._vraf);
   p._vraf=requestAnimationFrame(()=>drawVPVR(pi));
 }
 
-// ══════════════════════════════════════
-// BUILD PANEL DOM
-// ══════════════════════════════════════
-function buildDOM(pi){
-  const el=document.getElementById(`pnl-${pi}`);
-  const p=panels[pi];
-  el.innerHTML='';
-
-  const tb=document.createElement('div');
-  tb.className='ptb'; tb.id=`tb-${pi}`;
-
-  // TF select
-  const tfsel=document.createElement('select');
-  tfsel.className='tf-sel';
-  TFS.forEach(tf=>{
-    const o=document.createElement('option');
-    o.value=tf; o.textContent=tf;
-    if(tf===p.tf) o.selected=true;
-    tfsel.appendChild(o);
-  });
-  tfsel.onchange=()=>changeTF(pi,tfsel.value);
-
-  // Log button
-  const logBtn=document.createElement('button');
-  logBtn.className='vm-btn'; logBtn.id=`log-${pi}`; logBtn.textContent='LOG';
-  logBtn.title='对数坐标轴';
-  logBtn.onclick=()=>toggleLog(pi);
-
-  // Invert button
-  const invBtn=document.createElement('button');
-  invBtn.className='vm-btn'; invBtn.id=`inv-${pi}`; invBtn.textContent='↕';
-  invBtn.title='倒垂视图';
-  invBtn.onclick=()=>toggleInvert(pi);
-
-  const sep=document.createElement('div'); sep.className='sep';
-
-  // chips
-  const chips=document.createElement('div');
-  chips.className='ind-chips'; chips.id=`chips-${pi}`;
-
-  // add button
-  const addBtn=document.createElement('button');
-  addBtn.className='add-ind'; addBtn.textContent='+'; addBtn.title='添加指标';
-  addBtn.onclick=e=>{e.stopPropagation();openPopAdd(pi,addBtn);};
-
-  // price
-  const pp=document.createElement('span');
-  pp.className='pp'; pp.id=`pp-${pi}`; pp.textContent='--';
-
-  tb.append(tfsel,logBtn,invBtn,sep,chips,addBtn,pp);
-
-  const cw=document.createElement('div');
-  cw.className='cw'; cw.id=`cw-${pi}`;
-  cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
-
-  el.append(tb,cw);
-  renderChips(pi);
-}
-
-// chips sorted: EMA/TEMA by period asc, then VWAP/BB, then VPVR last
+// ══════════════════════════════════════════════
+// SHARED CHIPS (top bar)
+// ══════════════════════════════════════════════
 function chipSortKey(ind){
-  if(ind.type==='ema'||ind.type==='tema') return ind.p;
-  if(ind.type==='bb')   return 5000;
-  if(ind.type==='vwap') return 6000;
-  if(ind.type==='vpvr') return 9999;
+  if(ind.type==='ma-type')return ind.p;
+  if(ind.type==='bb')return 5000;
+  if(ind.type==='vwap')return 6000;
+  if(ind.type==='vpvr')return 9999;
   return 7000;
 }
-
-function indLabel(ind){
-  if(ind.type==='ema')  return `EMA${ind.p}`;
-  if(ind.type==='tema') return `TEMA${ind.p}`;
-  if(ind.type==='bb')   return `BB(${ind.p},${ind.m})`;
-  if(ind.type==='vwap') return 'VWAP';
-  if(ind.type==='vpvr') return 'VPVR';
-  return ind.type.toUpperCase();
-}
-
-function renderChips(pi){
-  const p=panels[pi];
-  const chips=document.getElementById(`chips-${pi}`);
-  if(!chips) return;
-  chips.innerHTML='';
-
-  const sorted=[...p.inds].sort((a,b)=>chipSortKey(a)-chipSortKey(b));
+function renderSharedChips(){
+  const container=document.getElementById('sh-chips');
+  if(!container)return;
+  container.innerHTML='';
+  const sorted=[...sharedInds].sort((a,b)=>chipSortKey(a)-chipSortKey(b));
   for(const ind of sorted){
-    const fs=ind.fs||10; // chip font-size from indicator def
+    const fs=ind.fs||10;
     const chip=document.createElement('div');
     chip.className='chip';
     chip.style.borderColor=ind.color;
     chip.style.color=ind.color;
-    chip.style.background=hexRgba(ind.color,0.12);
+    chip.style.background=hexRgba(ind.color,.12);
     chip.style.fontSize=fs+'px';
-    chip.innerHTML=`<span class="clabel">${indLabel(ind)}</span><span class="x">✕</span>`;
-    chip.querySelector('.clabel').onclick=e=>{e.stopPropagation();openPopEdit(pi,ind.id,chip);};
-    chip.querySelector('.x').onclick=e=>{e.stopPropagation();removeInd(pi,ind.id);};
-    chips.appendChild(chip);
+    chip.innerHTML=`<span class="cl">${indLabel(ind)}</span><span class="cx">✕</span>`;
+    chip.querySelector('.cl').onclick=e=>{e.stopPropagation();openPopEdit(ind.id,chip);};
+    chip.querySelector('.cx').onclick=e=>{e.stopPropagation();removeSharedInd(ind.id);};
+    container.appendChild(chip);
   }
 }
+function removeSharedInd(id){
+  sharedInds=sharedInds.filter(i=>i.id!==id);
+  renderSharedChips();
+  redrawAllPanels();
+}
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
+// BUILD PANEL DOM (toolbar only: TF + LOG + INV + price)
+// ══════════════════════════════════════════════
+function buildDOM(pi){
+  const el=document.getElementById(`pnl-${pi}`);
+  const p=panels[pi];
+  el.innerHTML='';
+  const tb=document.createElement('div');tb.className='ptb';tb.id=`tb-${pi}`;
+  const tfsel=document.createElement('select');tfsel.className='tf-sel';
+  TFS.forEach(tf=>{const o=document.createElement('option');o.value=tf;o.textContent=tf;if(tf===p.tf)o.selected=true;tfsel.appendChild(o);});
+  tfsel.onchange=()=>changeTF(pi,tfsel.value);
+  const logBtn=document.createElement('button');logBtn.className='vm-btn';logBtn.id=`log-${pi}`;logBtn.textContent='LOG';logBtn.title='对数坐标';logBtn.onclick=()=>toggleLog(pi);
+  const invBtn=document.createElement('button');invBtn.className='vm-btn';invBtn.id=`inv-${pi}`;invBtn.textContent='↕';invBtn.title='倒垂视图';invBtn.onclick=()=>toggleInvert(pi);
+  const pp=document.createElement('span');pp.className='pp';pp.id=`pp-${pi}`;pp.textContent='--';
+  tb.append(tfsel,logBtn,invBtn,pp);
+  const cw=document.createElement('div');cw.className='cw';cw.id=`cw-${pi}`;
+  cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
+  el.append(tb,cw);
+}
+
+// ══════════════════════════════════════════════
 // LOAD PANEL
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 async function loadPanel(pi){
   const p=panels[pi];
   const cw=document.getElementById(`cw-${pi}`);
-
   if(p.chart){p.chart.remove();p.chart=null;}
   if(p.ws){try{p.ws.close();}catch(_){}p.ws=null;}
   if(p._vraf){cancelAnimationFrame(p._vraf);p._vraf=null;}
-  p.logMode=p.logMode||false;
-  p.invMode=p.invMode||false;
-
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
-
   try{
-    const candles=await fetchCandles(p.tf);
-    p.candles=candles;
-    const W=cw.clientWidth||800, H=cw.clientHeight||400;
-
-    const mainDiv=document.createElement('div');
-    mainDiv.style.cssText=`position:absolute;left:0;right:0;top:0;height:${H}px;`;
-    cw.appendChild(mainDiv);
-
-    const vc=document.createElement('canvas');
-    vc.style.cssText='position:absolute;left:0;top:0;pointer-events:none;z-index:8;';
-    vc.width=W; vc.height=H;
-    cw.appendChild(vc);
-    p.vpvrCanvas=vc;
-
+    const candles=await fetchCandles(p.tf);p.candles=candles;
+    const W=cw.clientWidth||800,H=cw.clientHeight||400;
+    const mainDiv=document.createElement('div');mainDiv.style.cssText=`position:absolute;left:0;right:0;top:0;height:${H}px;`;cw.appendChild(mainDiv);
+    const vc=document.createElement('canvas');vc.style.cssText='position:absolute;left:0;top:0;pointer-events:none;z-index:8;';vc.width=W;vc.height=H;cw.appendChild(vc);p.vpvrCanvas=vc;
     p.chart=LightweightCharts.createChart(mainDiv,{
-      width:W, height:H,
+      width:W,height:H,
       layout:{background:{type:'Solid',color:'#131722'},textColor:'#787b86'},
       grid:{vertLines:{color:'#1c2030'},horzLines:{color:'#1c2030'}},
       crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
-      rightPriceScale:{
-        borderColor:'#363c4e',
-        scaleMargins:{top:0.05,bottom:0.04},
-        mode: p.logMode ? 1 : 0,
-        invertScale: p.invMode,
-      },
+      rightPriceScale:{borderColor:'#363c4e',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
       timeScale:{borderColor:'#363c4e',timeVisible:true,secondsVisible:false},
       handleScroll:true,handleScale:true,
     });
-
-    p.candleSeries=p.chart.addCandlestickSeries({
-      upColor:'#26a69a',downColor:'#ef5350',
-      borderUpColor:'#26a69a',borderDownColor:'#ef5350',
-      wickUpColor:'#26a69a',wickDownColor:'#ef5350',
-    });
+    p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
     p.candleSeries.setData(candles);
     p.chart.timeScale().fitContent();
     p.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>schedVPVR(pi));
-
     p.seriesMap={};
     drawAllInds(pi);
     p.chart.subscribeCrosshairMove(param=>onCross(pi,param));
     document.getElementById(`ldg-${pi}`)?.remove();
-    updatePP(pi);
-    subKline(pi);
-    schedVPVR(pi);
-    syncViewBtns(pi);
-
+    updatePP(pi);subKline(pi);schedVPVR(pi);syncViewBtns(pi);
   }catch(e){
-    const l=document.getElementById(`ldg-${pi}`);
-    if(l) l.innerHTML=`<span style="color:var(--red)">加载失败: ${e.message}</span>`;
+    const l=document.getElementById(`ldg-${pi}`);if(l)l.innerHTML=`<span style="color:var(--red)">加载失败: ${e.message}</span>`;
   }
 }
 
-// ══════════════════════════════════════
-// LOG / INVERT TOGGLE
-// ══════════════════════════════════════
-function toggleLog(pi){
-  const p=panels[pi]; if(!p.chart) return;
-  p.logMode=!p.logMode;
-  p.chart.priceScale('right').applyOptions({ mode: p.logMode ? 1 : 0 });
-  syncViewBtns(pi);
-}
-
-function toggleInvert(pi){
-  const p=panels[pi]; if(!p.chart) return;
-  p.invMode=!p.invMode;
-  p.chart.priceScale('right').applyOptions({ invertScale: p.invMode });
-  schedVPVR(pi);
-  syncViewBtns(pi);
-}
-
-function syncViewBtns(pi){
-  const p=panels[pi];
-  const lb=document.getElementById(`log-${pi}`);
-  const ib=document.getElementById(`inv-${pi}`);
-  if(lb) lb.classList.toggle('on', !!p.logMode);
-  if(ib) ib.classList.toggle('on', !!p.invMode);
-}
-
-// ══════════════════════════════════════
-// DRAW INDICATORS
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
+// DRAW ALL INDICATORS (uses sharedInds + maType)
+// ══════════════════════════════════════════════
 function toLD(arr,times){return arr.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean);}
 
 function drawAllInds(pi){
   const p=panels[pi];
-  if(!p.chart||!p.candles) return;
-  const candles=p.candles, closes=candles.map(c=>c.close), times=candles.map(c=>c.time);
-
+  if(!p.chart||!p.candles)return;
+  const candles=p.candles,closes=candles.map(c=>c.close),times=candles.map(c=>c.time);
   for(const s of Object.values(p.seriesMap||{})){try{p.chart.removeSeries(s);}catch(_){}}
   p.seriesMap={};
-
-  for(const ind of p.inds){
-    if(ind.type==='vpvr') continue;
-
-    // use explicit lw if set, otherwise auto from period
-    let lw, col;
-    if(ind.lw){
-      lw=ind.lw; col=ind.color;
-    }else{
-      const st=ind.p?autoStyle(ind.p):{lw:1.5,op:.85};
-      lw=st.lw; col=hexRgba(ind.color, st.op);
-    }
-
+  for(const ind of sharedInds){
+    const rtype=resolveType(ind);
+    if(rtype==='vpvr')continue;
+    const lw=ind.lw||(ind.p?autoStyle(ind.p).lw:1.5);
+    const col=ind.color;
     const ln=(c=col,w=lw)=>p.chart.addLineSeries({color:c,lineWidth:w,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
-
-    if(ind.type==='ema'){
-      const s=ln(); s.setData(toLD(calcEMA(closes,ind.p),times)); p.seriesMap[ind.id]=s;
-    }else if(ind.type==='tema'){
-      const s=ln(); s.setData(toLD(calcTEMA(closes,ind.p),times)); p.seriesMap[ind.id]=s;
-    }else if(ind.type==='bb'){
+    if(rtype==='ema'){
+      const s=ln();s.setData(toLD(calcEMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
+    }else if(rtype==='tema'){
+      const s=ln();s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
+    }else if(rtype==='ma'){
+      const s=ln();s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id]=s;
+    }else if(rtype==='bb'){
       const b=calcBB(closes,ind.p,ind.m||2);
-      const sm=ln(col,lw), su=ln(hexRgba(ind.color,.5),Math.max(.5,lw-.4)), sl=ln(hexRgba(ind.color,.5),Math.max(.5,lw-.4));
-      sm.setData(toLD(b.mid,times)); su.setData(toLD(b.up,times)); sl.setData(toLD(b.lo,times));
-      p.seriesMap[ind.id+'m']=sm; p.seriesMap[ind.id+'u']=su; p.seriesMap[ind.id+'l']=sl;
-    }else if(ind.type==='vwap'){
-      const s=ln(ind.color,1.8); s.setData(toLD(calcVWAP(candles),times)); p.seriesMap[ind.id]=s;
+      const sm=ln(col,lw),su=ln(hexRgba(col,.5),Math.max(.5,lw-.4)),sl=ln(hexRgba(col,.5),Math.max(.5,lw-.4));
+      sm.setData(toLD(b.mid,times));su.setData(toLD(b.up,times));sl.setData(toLD(b.lo,times));
+      p.seriesMap[ind.id+'m']=sm;p.seriesMap[ind.id+'u']=su;p.seriesMap[ind.id+'l']=sl;
+    }else if(rtype==='vwap'){
+      const s=ln(col,1.8);s.setData(toLD(calcVWAP(candles),times));p.seriesMap[ind.id]=s;
     }
   }
   schedVPVR(pi);
 }
 
-// ══════════════════════════════════════
-// GLOBAL POPOVER
-// ══════════════════════════════════════
+function redrawAllPanels(){
+  panels.forEach((_,i)=>drawAllInds(i));
+}
+
+// ══════════════════════════════════════════════
+// LOG / INVERT
+// ══════════════════════════════════════════════
+function toggleLog(pi){
+  const p=panels[pi];if(!p.chart)return;
+  p.logMode=!p.logMode;
+  p.chart.priceScale('right').applyOptions({mode:p.logMode?1:0});
+  syncViewBtns(pi);
+}
+function toggleInvert(pi){
+  const p=panels[pi];if(!p.chart)return;
+  p.invMode=!p.invMode;
+  p.chart.priceScale('right').applyOptions({invertScale:p.invMode});
+  schedVPVR(pi);syncViewBtns(pi);
+}
+function syncViewBtns(pi){
+  const p=panels[pi];
+  document.getElementById(`log-${pi}`)?.classList.toggle('on',!!p.logMode);
+  document.getElementById(`inv-${pi}`)?.classList.toggle('on',!!p.invMode);
+}
+
+// ══════════════════════════════════════════════
+// POPOVER
+// ══════════════════════════════════════════════
 function onGTypeChange(){
   const t=document.getElementById('g-type').value;
   document.getElementById('g-period-row').style.display=(t==='vwap'||t==='vpvr')?'none':'';
@@ -580,169 +502,111 @@ function onGTypeChange(){
   document.getElementById('g-color-row').style.display=t==='vpvr'?'none':'';
   document.getElementById('g-vpvr-opts').style.display=t==='vpvr'?'flex':'none';
 }
-
-function openPopAdd(pi, anchor){
-  POP.pi=pi; POP.indId=null; POP.mode='add';
-  document.getElementById('gpop-title').textContent='添加指标';
+function openPopAdd(anchor){
+  POP.indId=null;POP.mode='add';
+  document.getElementById('gpop-title').textContent='添加指标（全面板）';
   document.getElementById('gpop-btn').textContent='添加';
-  document.getElementById('g-type').value='ema';
+  document.getElementById('g-type').value='ma-type';
   document.getElementById('g-type').disabled=false;
   document.getElementById('g-period').value='21';
   document.getElementById('g-mult').value='2';
   document.getElementById('g-color').value=PALETTE[_pidx%PALETTE.length];
-  document.getElementById('g-swap-row').style.display='none';
-  onGTypeChange();
-  positionPop(anchor);
+  onGTypeChange();positionPop(anchor);
 }
-
-function openPopEdit(pi, indId, anchor){
-  const ind=panels[pi].inds.find(i=>i.id===indId);
-  if(!ind) return;
-  POP.pi=pi; POP.indId=indId; POP.mode='edit';
-  document.getElementById('gpop-title').textContent='编辑指标';
+function openPopEdit(indId,anchor){
+  const ind=sharedInds.find(i=>i.id===indId);if(!ind)return;
+  POP.indId=indId;POP.mode='edit';
+  document.getElementById('gpop-title').textContent='编辑指标（全面板）';
   document.getElementById('gpop-btn').textContent='更新';
   document.getElementById('g-type').value=ind.type;
   document.getElementById('g-type').disabled=true;
   document.getElementById('g-period').value=ind.p||21;
   document.getElementById('g-mult').value=ind.m||2;
   document.getElementById('g-color').value=ind.color;
-  if(ind.rows) document.getElementById('g-vrows').value=ind.rows;
-  if(ind.width) document.getElementById('g-vw').value=ind.width;
+  if(ind.rows)document.getElementById('g-vrows').value=ind.rows;
+  if(ind.width)document.getElementById('g-vw').value=ind.width;
   document.getElementById('g-vrows-v').textContent=ind.rows||100;
   document.getElementById('g-vw-v').textContent=ind.width||18;
-
-  // show EMA↔TEMA swap for ema/tema only
-  const isEmaType=ind.type==='ema'||ind.type==='tema';
-  const swapRow=document.getElementById('g-swap-row');
-  swapRow.style.display=isEmaType?'':'none';
-  if(isEmaType){
-    document.getElementById('g-swap-btn').textContent=
-      ind.type==='ema' ? '切换为 TEMA' : '切换回 EMA';
-  }
-
-  onGTypeChange();
-  positionPop(anchor);
+  onGTypeChange();positionPop(anchor);
 }
-
-function swapEmaThema(){
-  if(POP.mode!=='edit'||POP.indId==null) return;
-  const ind=panels[POP.pi].inds.find(i=>i.id===POP.indId);
-  if(!ind) return;
-  ind.type=ind.type==='ema'?'tema':'ema';
-  renderChips(POP.pi);
-  drawAllInds(POP.pi);
-  // update button label
-  document.getElementById('g-swap-btn').textContent=
-    ind.type==='ema'?'切换为 TEMA':'切换回 EMA';
-  document.getElementById('g-type').value=ind.type;
-}
-
 function positionPop(anchor){
-  const pop=document.getElementById('gpop');
-  pop.classList.add('show');
+  const pop=document.getElementById('gpop');pop.classList.add('show');
   const rect=anchor.getBoundingClientRect();
-  let left=rect.left, top=rect.bottom+4;
-  const pw=230, ph=340;
-  if(left+pw>window.innerWidth) left=window.innerWidth-pw-8;
-  if(top+ph>window.innerHeight) top=rect.top-ph-4;
-  pop.style.left=left+'px';
-  pop.style.top=Math.max(4,top)+'px';
+  let left=rect.left,top=rect.bottom+4;
+  if(left+230>window.innerWidth)left=window.innerWidth-238;
+  if(top+320>window.innerHeight)top=rect.top-320-4;
+  pop.style.left=left+'px';pop.style.top=Math.max(4,top)+'px';
 }
-
 function closePop(){
   document.getElementById('gpop').classList.remove('show');
   document.getElementById('g-type').disabled=false;
 }
-
 document.addEventListener('click',e=>{
   const pop=document.getElementById('gpop');
-  if(!pop.contains(e.target)&&!e.target.closest('.add-ind')&&!e.target.closest('.clabel')){
-    closePop();
-  }
+  if(!pop.contains(e.target)&&!e.target.closest('.add-ind')&&!e.target.closest('.cl'))closePop();
 });
-
 function commitPop(){
-  const pi=POP.pi;
   const type=document.getElementById('g-type').value;
   const period=parseInt(document.getElementById('g-period').value)||21;
   const mult=parseFloat(document.getElementById('g-mult').value)||2;
   const color=document.getElementById('g-color').value;
   const rows=parseInt(document.getElementById('g-vrows').value)||100;
   const width=parseInt(document.getElementById('g-vw').value)||18;
-
   if(POP.mode==='add'){
     const ind={id:uid(),type,color,fs:10};
-    if(type==='ema'||type==='tema'){ind.p=Math.max(1,Math.min(2000,period));}
+    if(type==='ma-type'){ind.p=Math.max(1,Math.min(2000,period));}
     if(type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
     if(type==='vpvr'){ind.rows=rows;ind.width=width;}
     _pidx++;
-    panels[pi].inds.push(ind);
+    sharedInds.push(ind);
   }else{
-    const ind=panels[pi].inds.find(i=>i.id===POP.indId);
+    const ind=sharedInds.find(i=>i.id===POP.indId);
     if(ind){
-      ind.color=color;
-      // clear fixed lw so color picker change takes effect
-      ind.lw=undefined;
-      if(ind.type==='ema'||ind.type==='tema') ind.p=Math.max(1,Math.min(2000,period));
+      ind.color=color;ind.lw=undefined;
+      if(ind.type==='ma-type')ind.p=Math.max(1,Math.min(2000,period));
       if(ind.type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
       if(ind.type==='vpvr'){ind.rows=rows;ind.width=width;}
     }
   }
-  renderChips(pi);
-  drawAllInds(pi);
+  renderSharedChips();
+  redrawAllPanels();
   closePop();
 }
 
-// ══════════════════════════════════════
-// IND MANAGEMENT
-// ══════════════════════════════════════
-function removeInd(pi,id){
-  panels[pi].inds=panels[pi].inds.filter(i=>i.id!==id);
-  renderChips(pi);
-  drawAllInds(pi);
-}
-
+// ══════════════════════════════════════════════
+// PANEL INTERACTIONS
+// ══════════════════════════════════════════════
 function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);}
-
 function updatePP(pi){
-  const p=panels[pi];
-  const last=p.candles?.[p.candles.length-1];
-  if(!last) return;
+  const p=panels[pi];const last=p.candles?.[p.candles.length-1];if(!last)return;
   const el=document.getElementById(`pp-${pi}`);
   if(el){el.textContent=fmt(last.close);el.style.color=last.close>=last.open?'var(--green)':'var(--red)';}
 }
-
 function onCross(pi,param){
-  const p=panels[pi];
-  if(!param.time||!p.candles) return;
-  const c=p.candles.find(x=>x.time===param.time);
-  if(!c) return;
+  const p=panels[pi];if(!param.time||!p.candles)return;
+  const c=p.candles.find(x=>x.time===param.time);if(!c)return;
   const el=document.getElementById(`pp-${pi}`);
-  if(el){
-    el.textContent=`O:${fmt(c.open)} H:${fmt(c.high)} L:${fmt(c.low)} C:${fmt(c.close)}`;
-    el.style.color=c.close>=c.open?'var(--green)':'var(--red)';
-    el.style.fontSize='9px';
-  }
+  if(el){el.textContent=`O:${fmt(c.open)} H:${fmt(c.high)} L:${fmt(c.low)} C:${fmt(c.close)}`;el.style.color=c.close>=c.open?'var(--green)':'var(--red)';el.style.fontSize='9px';}
 }
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // WEBSOCKET
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 function subKline(pi){
-  const p=panels[pi]; let retry=1000;
+  const p=panels[pi];let retry=1000;
   const url=`wss://stream.binance.com:9443/ws/btcusdt@kline_${p.tf}`;
   function conn(){
-    const ws=new WebSocket(url); p.ws=ws;
+    const ws=new WebSocket(url);p.ws=ws;
     ws.onmessage=evt=>{
       try{
-        const k=JSON.parse(evt.data).k; if(!k) return;
+        const k=JSON.parse(evt.data).k;if(!k)return;
         const c={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v};
         const last=p.candles[p.candles.length-1];
-        if(last&&last.time===c.time) p.candles[p.candles.length-1]=c;
+        if(last&&last.time===c.time)p.candles[p.candles.length-1]=c;
         else if(!last||c.time>last.time){p.candles.push(c);if(p.candles.length>2100)p.candles.shift();}
-        if(p.candleSeries) p.candleSeries.update(c);
-        if(k.x) drawAllInds(pi);
-        updatePP(pi); schedVPVR(pi); retry=1000;
+        if(p.candleSeries)p.candleSeries.update(c);
+        if(k.x)drawAllInds(pi);
+        updatePP(pi);schedVPVR(pi);retry=1000;
       }catch(_){}
     };
     ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
@@ -750,20 +614,16 @@ function subKline(pi){
   }
   conn();
 }
-
 function startTicker(){
   let retry=1000;
   function conn(){
     const ws=new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@miniTicker');
     ws.onmessage=evt=>{
       try{
-        const d=JSON.parse(evt.data);
-        const price=+d.c, chg=(price-+d.o)/+d.o*100;
+        const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
         document.getElementById('lp').textContent=fmt(price);
         document.getElementById('lp').className=chg>=0?'up':'dn';
-        const ce=document.getElementById('pc');
-        ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
-        ce.className=chg>=0?'up':'dn';
+        const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
         document.getElementById('shi').textContent=fmt(+d.h);
         document.getElementById('slo').textContent=fmt(+d.l);
         document.getElementById('svol').textContent=fmtV(+d.v);
@@ -775,52 +635,46 @@ function startTicker(){
   }
   conn();
 }
-
 async function fetchFR(){try{const r=await fetch(`${FAPI}/premiumIndex?symbol=${SYM}`);const d=await r.json();const fr=+d.lastFundingRate*100;const el=document.getElementById('sfr');el.textContent=(fr>=0?'+':'')+fr.toFixed(4)+'%';el.style.color=fr>=0?'var(--green)':'var(--red)';}catch(_){}}
 async function fetchOI(){try{const r=await fetch(`${FAPI}/openInterest?symbol=${SYM}`);const d=await r.json();document.getElementById('soi').textContent=fmtV(+d.openInterest);}catch(_){}}
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // RESIZE
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 function resizeAll(){
   panels.forEach((p,pi)=>{
-    if(!p.chart) return;
-    const cw=document.getElementById(`cw-${pi}`); if(!cw) return;
-    const W=cw.clientWidth, H=cw.clientHeight; if(!W||!H) return;
+    if(!p.chart)return;
+    const cw=document.getElementById(`cw-${pi}`);if(!cw)return;
+    const W=cw.clientWidth,H=cw.clientHeight;if(!W||!H)return;
     p.chart.resize(W,H);
-    const md=cw.querySelector('div[style]'); if(md) md.style.height=H+'px';
+    const md=cw.querySelector('div[style]');if(md)md.style.height=H+'px';
     if(p.vpvrCanvas){p.vpvrCanvas.width=W;p.vpvrCanvas.height=H;}
     schedVPVR(pi);
   });
 }
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // FORMAT
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):v.toFixed(2);}
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 // INIT
-// ══════════════════════════════════════
+// ══════════════════════════════════════════════
 async function init(){
+  initSharedInds();
+  renderSharedChips();
   for(let i=0;i<4;i++){
-    panels[i]={
-      tf: PANEL_TFS[i],
-      inds: buildDefaultInds(),
-      candles:[], seriesMap:{},
-      chart:null, ws:null, vpvrCanvas:null, _vraf:null,
-      logMode:false, invMode:false,
-    };
+    panels[i]={tf:PANEL_TFS[i],candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false};
     buildDOM(i);
   }
   await Promise.all([0,1,2,3].map(i=>loadPanel(i)));
   new ResizeObserver(resizeAll).observe(document.getElementById('grid'));
-  startTicker(); fetchFR(); fetchOI();
+  startTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>[0,1,2,3].forEach(i=>schedVPVR(i)),600);
 }
-
 init();
 </script>
 </body>
