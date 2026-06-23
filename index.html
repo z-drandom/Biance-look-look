@@ -3,594 +3,519 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BTC 看盘 · 多周期分析</title>
+<title>BTC 看盘</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-  :root {
-    --bg: #0d1117;
-    --bg2: #161b22;
-    --bg3: #21262d;
-    --border: #30363d;
-    --text: #e6edf3;
-    --text2: #8b949e;
-    --green: #3fb950;
-    --red: #f85149;
-    --blue: #58a6ff;
-    --yellow: #d29922;
-    --purple: #bc8cff;
-    --orange: #ffa657;
-    --accent: #1f6feb;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+:root {
+  --bg:#0d1117; --bg2:#161b22; --bg3:#21262d; --border:#30363d;
+  --text:#e6edf3; --text2:#8b949e;
+  --green:#3fb950; --red:#f85149; --blue:#58a6ff;
+  --yellow:#d29922; --purple:#bc8cff; --orange:#ffa657;
+  --accent:#1f6feb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
 
-  /* ─── Header ─── */
-  #header {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-shrink: 0;
-    height: 52px;
-  }
-  #logo { font-size: 15px; font-weight: 700; color: var(--blue); letter-spacing: -0.3px; white-space: nowrap; }
-  #price-block { display: flex; align-items: baseline; gap: 8px; }
-  #live-price { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  #price-change { font-size: 13px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
-  .up { color: var(--green); }
-  .down { color: var(--red); }
-  .up-bg { background: rgba(63,185,80,0.15); color: var(--green); }
-  .down-bg { background: rgba(248,81,73,0.15); color: var(--red); }
+/* ── Header ── */
+#header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:16px;flex-shrink:0;height:48px}
+#logo{font-size:15px;font-weight:700;color:var(--blue);white-space:nowrap}
+#live-price{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+#price-change{font-size:12px;font-weight:600;padding:2px 6px;border-radius:4px}
+.up{color:var(--green)} .down{color:var(--red)}
+.up-bg{background:rgba(63,185,80,.15);color:var(--green)} .down-bg{background:rgba(248,81,73,.15);color:var(--red)}
+.stat{display:flex;flex-direction:column;gap:1px}
+.stat-label{color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.stat-value{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+#status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;flex-shrink:0;margin-left:auto}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-  #stats { display: flex; gap: 16px; flex: 1; }
-  .stat { display: flex; flex-direction: column; gap: 1px; }
-  .stat-label { color: var(--text2); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .stat-value { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* ── Strategy bar ── */
+#strat-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;display:flex;align-items:center;gap:6px;flex-shrink:0;height:36px}
+.strat-label{color:var(--text2);font-size:11px;white-space:nowrap}
+.strat-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-weight:500;transition:all .15s;white-space:nowrap}
+.strat-btn:hover{border-color:var(--blue);color:var(--text)}
+.strat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.vsep{width:1px;height:18px;background:var(--border);margin:0 3px}
+.lay-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;transition:all .15s}
+.lay-btn:hover,.lay-btn.active{border-color:var(--blue);color:var(--blue)}
 
-  #status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; flex-shrink: 0; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* ── Charts grid ── */
+#charts-area{flex:1;overflow:hidden;display:grid;gap:2px;padding:2px;background:var(--border)}
+#charts-area.lay-1big2s{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr}
+#charts-area.lay-1big2s .chart-panel:first-child{grid-row:1/3}
+#charts-area.lay-3col{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr}
+#charts-area.lay-2x2{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 
-  /* ─── Strategy Bar ─── */
-  #strategy-bar {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    height: 38px;
-  }
-  .strategy-label { color: var(--text2); font-size: 11px; margin-right: 4px; white-space: nowrap; }
-  .strat-btn {
-    padding: 4px 12px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text2);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    transition: all .15s;
-    white-space: nowrap;
-  }
-  .strat-btn:hover { border-color: var(--blue); color: var(--text); }
-  .strat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chart-panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0}
 
-  .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+/* ── Panel header ── */
+.ph{display:flex;align-items:center;gap:5px;padding:3px 6px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;min-height:30px;flex-wrap:nowrap;overflow:hidden}
+.ph-title{font-weight:700;font-size:11px;color:var(--text);white-space:nowrap}
+.tf-sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 4px;font-size:11px;cursor:pointer;outline:none;flex-shrink:0}
+.tf-sel:focus{border-color:var(--blue)}
 
-  /* layout toggle */
-  .layout-btn {
-    padding: 4px 8px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text2);
-    cursor: pointer;
-    font-size: 11px;
-    transition: all .15s;
-  }
-  .layout-btn:hover, .layout-btn.active { border-color: var(--blue); color: var(--blue); }
+/* indicator chips */
+.ind-chips{display:flex;gap:3px;flex:1;overflow:hidden;flex-wrap:nowrap;align-items:center}
+.ind-chip{display:flex;align-items:center;gap:2px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);font-size:10px;font-weight:600;background:var(--bg3);cursor:default;white-space:nowrap;flex-shrink:0}
+.ind-chip .rm{cursor:pointer;opacity:.5;margin-left:1px;font-size:10px;line-height:1}
+.ind-chip .rm:hover{opacity:1;color:var(--red)}
 
-  /* ─── Charts Grid ─── */
-  #charts-area {
-    flex: 1;
-    overflow: hidden;
-    display: grid;
-    gap: 2px;
-    padding: 2px;
-    background: var(--border);
-  }
-  #charts-area.layout-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-  #charts-area.layout-3col { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr; }
-  #charts-area.layout-1big2small { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
-  #charts-area.layout-1big2small .chart-panel:first-child { grid-row: 1 / 3; }
+.add-btn{padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:12px;flex-shrink:0;line-height:1.4}
+.add-btn:hover{border-color:var(--blue);color:var(--blue)}
 
-  .chart-panel {
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-  }
+.ph-price{margin-left:auto;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap;flex-shrink:0}
+.sub-sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 4px;font-size:10px;cursor:pointer;outline:none;flex-shrink:0}
 
-  /* Panel header */
-  .panel-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    height: 32px;
-  }
-  .panel-title { font-weight: 700; font-size: 12px; color: var(--text); }
-  .tf-select {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    cursor: pointer;
-    outline: none;
-  }
-  .tf-select:focus { border-color: var(--blue); }
+/* ── Add indicator popover ── */
+.ind-popover{position:absolute;top:32px;left:0;z-index:50;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;display:none;flex-direction:column;gap:8px;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.ind-popover.open{display:flex}
+.pop-row{display:flex;align-items:center;gap:6px}
+.pop-label{color:var(--text2);font-size:11px;width:56px}
+.pop-sel,.pop-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:3px 6px;font-size:12px;outline:none}
+.pop-sel:focus,.pop-input:focus{border-color:var(--blue)}
+.pop-input{width:70px}
+.pop-add-btn{padding:4px 12px;background:var(--accent);border:none;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+.pop-add-btn:hover{background:#388bfd}
+.pop-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px}
+.pop-close:hover{color:var(--text)}
 
-  .ind-toggles { display: flex; gap: 3px; flex-wrap: nowrap; overflow: hidden; }
-  .ind-toggle {
-    padding: 1px 5px;
-    border-radius: 3px;
-    border: 1px solid transparent;
-    font-size: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all .1s;
-    white-space: nowrap;
-  }
-  .panel-last-price { margin-left: auto; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text2); }
+/* vpvr controls in popover */
+.vpvr-opts{display:flex;flex-direction:column;gap:6px;padding-top:4px;border-top:1px solid var(--border);margin-top:2px}
+.vpvr-opts label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.vpvr-opts input[type=range]{flex:1;accent-color:var(--blue)}
+.vpvr-opts .vval{font-size:11px;color:var(--text);width:30px}
 
-  /* indicator colors */
-  .ind-ema9   { border-color: #58a6ff; color: #58a6ff; }
-  .ind-ema21  { border-color: #ffa657; color: #ffa657; }
-  .ind-ema50  { border-color: #bc8cff; color: #bc8cff; }
-  .ind-ema200 { border-color: #f85149; color: #f85149; }
-  .ind-bb     { border-color: #d29922; color: #d29922; }
-  .ind-vwap   { border-color: #3fb950; color: #3fb950; }
-  .ind-macd   { border-color: #58a6ff; color: #58a6ff; }
-  .ind-rsi    { border-color: #bc8cff; color: #bc8cff; }
-  .ind-vol    { border-color: #8b949e; color: #8b949e; }
-  .ind-toggle.off { opacity: 0.35; background: transparent !important; }
-  .ind-toggle.on  { background: rgba(88,166,255,0.1); }
-  .ind-ema9.on    { background: rgba(88,166,255,0.15); }
-  .ind-ema21.on   { background: rgba(255,166,87,0.15); }
-  .ind-ema50.on   { background: rgba(188,140,255,0.15); }
-  .ind-ema200.on  { background: rgba(248,81,73,0.15); }
-  .ind-bb.on      { background: rgba(210,153,34,0.15); }
-  .ind-vwap.on    { background: rgba(63,185,80,0.15); }
-  .ind-macd.on    { background: rgba(88,166,255,0.15); }
-  .ind-rsi.on     { background: rgba(188,140,255,0.15); }
-  .ind-vol.on     { background: rgba(139,148,158,0.15); }
-
-  /* Chart wrapper */
-  .chart-wrapper { flex: 1; position: relative; overflow: hidden; }
-  .chart-main, .chart-sub { position: absolute; left: 0; right: 0; }
-  .chart-main { top: 0; }
-
-  /* Sub pane (RSI/MACD) */
-  .sub-pane-label {
-    position: absolute;
-    left: 8px;
-    top: 4px;
-    font-size: 10px;
-    color: var(--text2);
-    pointer-events: none;
-    z-index: 5;
-    font-weight: 600;
-  }
-
-  /* Loading overlay */
-  .loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(13,17,23,0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-    font-size: 12px;
-    color: var(--text2);
-    gap: 8px;
-  }
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid var(--border);
-    border-top-color: var(--blue);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Crosshair info */
-  .crosshair-info {
-    position: absolute;
-    top: 4px; left: 8px;
-    z-index: 5;
-    font-size: 10px;
-    color: var(--text2);
-    pointer-events: none;
-    display: flex; gap: 8px; flex-wrap: wrap;
-  }
-  .ci-item { display: flex; gap: 3px; }
-  .ci-label { color: var(--text2); }
-  .ci-val { font-weight: 600; font-variant-numeric: tabular-nums; }
-
-  /* Tooltip */
-  #tooltip {
-    position: fixed;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 11px;
-    pointer-events: none;
-    z-index: 100;
-    display: none;
-    min-width: 160px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.5);
-  }
-  #tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 2px; }
-  #tooltip .tt-label { color: var(--text2); }
-  #tooltip .tt-val { font-weight: 600; font-variant-numeric: tabular-nums; }
-
-  /* Alert badge */
-  .alert-badge {
-    position: absolute;
-    top: 36px; right: 8px;
-    background: rgba(248,81,73,0.9);
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    z-index: 20;
-    pointer-events: none;
-    animation: fadein .3s;
-  }
-  @keyframes fadein { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+/* ── Chart wrapper ── */
+.cw{flex:1;position:relative;overflow:hidden;min-height:0}
+.cw canvas{display:block}
+.loading{position:absolute;inset:0;background:rgba(13,17,23,.85);display:flex;align-items:center;justify-content:center;z-index:30;font-size:12px;color:var(--text2);gap:8px}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sub-label{position:absolute;left:6px;bottom:6px;font-size:10px;color:var(--text2);pointer-events:none;z-index:5;font-weight:600;opacity:.7}
 </style>
 </head>
 <body>
 
-<!-- ─── Header ─── -->
 <div id="header">
   <div id="logo">₿ BTC 看盘</div>
-  <div id="price-block">
-    <span id="live-price">--</span>
-    <span id="price-change">--</span>
-  </div>
-  <div id="stats">
-    <div class="stat"><span class="stat-label">24H 高</span><span class="stat-value" id="stat-high">--</span></div>
-    <div class="stat"><span class="stat-label">24H 低</span><span class="stat-value" id="stat-low">--</span></div>
-    <div class="stat"><span class="stat-label">24H 量(BTC)</span><span class="stat-value" id="stat-vol">--</span></div>
-    <div class="stat"><span class="stat-label">资金费率</span><span class="stat-value" id="stat-fr">--</span></div>
-    <div class="stat"><span class="stat-label">未平仓量</span><span class="stat-value" id="stat-oi">--</span></div>
-  </div>
-  <div id="status-dot" title="实时数据连接中"></div>
+  <span id="live-price">--</span>
+  <span id="price-change">--</span>
+  <div class="stat"><span class="stat-label">24H 高</span><span class="stat-value" id="st-hi">--</span></div>
+  <div class="stat"><span class="stat-label">24H 低</span><span class="stat-value" id="st-lo">--</span></div>
+  <div class="stat"><span class="stat-label">量(BTC)</span><span class="stat-value" id="st-vol">--</span></div>
+  <div class="stat"><span class="stat-label">资金费率</span><span class="stat-value" id="st-fr">--</span></div>
+  <div class="stat"><span class="stat-label">未平仓</span><span class="stat-value" id="st-oi">--</span></div>
+  <div id="status-dot"></div>
 </div>
 
-<!-- ─── Strategy Bar ─── -->
-<div id="strategy-bar">
-  <span class="strategy-label">策略模式：</span>
-  <button class="strat-btn active" id="btn-scalp" onclick="applyStrategy('scalp')">🔴 短线高杠杆 (10-30x &lt;1h)</button>
-  <button class="strat-btn" id="btn-swing" onclick="applyStrategy('swing')">🟡 中线低杠杆 (3-5x 1-10天)</button>
-  <button class="strat-btn" id="btn-spot" onclick="applyStrategy('spot')">🟢 现货长持 (数月)</button>
-  <div class="sep"></div>
-  <span class="strategy-label">布局：</span>
-  <button class="layout-btn active" id="lay-1big2small" onclick="setLayout('1big2small')">⬜⬛</button>
-  <button class="layout-btn" id="lay-3col" onclick="setLayout('3col')">⬛⬛⬛</button>
-  <button class="layout-btn" id="lay-2x2" onclick="setLayout('2x2')">⬛⬛<br>⬛⬛</button>
+<div id="strat-bar">
+  <span class="strat-label">策略：</span>
+  <button class="strat-btn active" id="btn-scalp" onclick="applyStrategy('scalp')">🔴 短线高杠杆 10-30x</button>
+  <button class="strat-btn" id="btn-swing" onclick="applyStrategy('swing')">🟡 中线低杠杆 3-5x</button>
+  <button class="strat-btn" id="btn-spot" onclick="applyStrategy('spot')">🟢 现货长持</button>
+  <div class="vsep"></div>
+  <span class="strat-label">布局：</span>
+  <button class="lay-btn active" id="lay-1big2s" onclick="setLayout('1big2s')">▣</button>
+  <button class="lay-btn" id="lay-3col" onclick="setLayout('3col')">⊟</button>
+  <button class="lay-btn" id="lay-2x2" onclick="setLayout('2x2')">⊞</button>
 </div>
 
-<!-- ─── Charts Grid ─── -->
-<div id="charts-area" class="layout-1big2small">
+<div id="charts-area" class="lay-1big2s">
   <div class="chart-panel" id="panel-0"></div>
   <div class="chart-panel" id="panel-1"></div>
   <div class="chart-panel" id="panel-2"></div>
 </div>
 
-<div id="tooltip"></div>
-
 <script>
-// ══════════════════════════════════════════════════════════════════
-// CONFIG
-// ══════════════════════════════════════════════════════════════════
-const SYMBOL = 'BTCUSDT';
-const BINANCE_REST = 'https://api.binance.com/api/v3';
-const BINANCE_FAPI = 'https://fapi.binance.com/fapi/v1';
-const WS_BASE = 'wss://stream.binance.com:9443/stream?streams=';
+// ═══════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════
+const SYM = 'BTCUSDT';
+const REST = 'https://api.binance.com/api/v3';
+const FAPI = 'https://fapi.binance.com/fapi/v1';
+const SUB_H = 88; // sub-pane height px
 
-const TF_LABELS = {
-  '1m':'1分','3m':'3分','5m':'5分','15m':'15分','30m':'30分',
-  '1h':'1小时','2h':'2小时','4h':'4小时','6h':'6小时',
-  '1d':'日线','3d':'3日','1w':'周线'
-};
+const TF_LIST = ['1m','3m','5m','15m','30m','1h','2h','4h','6h','12h','1d','3d','1w'];
 
-// Strategy presets: [tf, indicators[], subPane]
+// Color palette cycling for new indicators
+const PALETTE = ['#58a6ff','#ffa657','#3fb950','#bc8cff','#f85149','#d29922','#79c0ff','#ffd57e','#56d364'];
+
 const STRATEGIES = {
-  scalp: {
-    panels: [
-      { tf:'5m',  inds:['ema9','ema21','bb','vwap','vol','rsi'], sub:'rsi' },
-      { tf:'1m',  inds:['ema9','bb','vwap','vol'],               sub:'vol' },
-      { tf:'15m', inds:['ema9','ema21','ema50','vol','rsi'],      sub:'rsi' },
-    ]
-  },
-  swing: {
-    panels: [
-      { tf:'1h',  inds:['ema21','ema50','ema200','macd','vol'],   sub:'macd' },
-      { tf:'4h',  inds:['ema21','ema50','ema200','vol','rsi'],    sub:'rsi' },
-      { tf:'15m', inds:['ema9','ema21','bb','vwap','vol'],        sub:'vol' },
-    ]
-  },
-  spot: {
-    panels: [
-      { tf:'1d',  inds:['ema50','ema200','macd','vol','rsi'],     sub:'macd' },
-      { tf:'1w',  inds:['ema50','ema200','vol','rsi'],            sub:'rsi' },
-      { tf:'4h',  inds:['ema21','ema50','ema200','vol'],          sub:'vol' },
-    ]
-  }
+  scalp: [
+    { tf:'5m',  inds:[{type:'ema',p:9},{type:'ema',p:21},{type:'bb',p:20,m:2},{type:'vwap'}], sub:'rsi' },
+    { tf:'1m',  inds:[{type:'ema',p:9},{type:'bb',p:20,m:2}], sub:'vol' },
+    { tf:'15m', inds:[{type:'ema',p:9},{type:'ema',p:21},{type:'ema',p:50}], sub:'rsi' },
+  ],
+  swing: [
+    { tf:'1h',  inds:[{type:'ema',p:21},{type:'ema',p:50},{type:'ema',p:200}], sub:'macd' },
+    { tf:'4h',  inds:[{type:'ema',p:21},{type:'ema',p:50},{type:'ema',p:200}], sub:'rsi' },
+    { tf:'15m', inds:[{type:'ema',p:9},{type:'ema',p:21},{type:'bb',p:20,m:2}], sub:'vol' },
+  ],
+  spot: [
+    { tf:'1d',  inds:[{type:'ema',p:50},{type:'ema',p:200},{type:'tema',p:21}], sub:'macd' },
+    { tf:'1w',  inds:[{type:'ema',p:50},{type:'ema',p:200}], sub:'rsi' },
+    { tf:'4h',  inds:[{type:'ema',p:21},{type:'ema',p:50},{type:'ema',p:200}], sub:'vol' },
+  ],
 };
 
-const IND_DEFS = [
-  { key:'ema9',   label:'EMA9',  cls:'ind-ema9'   },
-  { key:'ema21',  label:'EMA21', cls:'ind-ema21'  },
-  { key:'ema50',  label:'EMA50', cls:'ind-ema50'  },
-  { key:'ema200', label:'EMA200',cls:'ind-ema200' },
-  { key:'bb',     label:'BB',    cls:'ind-bb'     },
-  { key:'vwap',   label:'VWAP', cls:'ind-vwap'   },
-  { key:'macd',   label:'MACD', cls:'ind-macd'   },
-  { key:'rsi',    label:'RSI',  cls:'ind-rsi'    },
-  { key:'vol',    label:'VOL',  cls:'ind-vol'     },
-];
-
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // STATE
-// ══════════════════════════════════════════════════════════════════
-const panels = []; // { tf, inds, sub, chart, series, candles, ws, ... }
-let wsTickerSocket = null;
-let currentStrategy = 'scalp';
-let currentLayout = '1big2small';
+// ═══════════════════════════════════════════════════
+const panels = []; // panel state objects
+let _uid = 1;
+const uid = () => _uid++;
+let currentStrat = 'scalp';
+let currentLayout = '1big2s';
 
-// ══════════════════════════════════════════════════════════════════
-// INDICATORS MATH
-// ══════════════════════════════════════════════════════════════════
-function calcEMA(closes, period) {
-  const k = 2 / (period + 1);
-  const out = new Array(closes.length).fill(null);
-  let ema = null;
-  for (let i = 0; i < closes.length; i++) {
-    if (closes[i] == null) continue;
-    if (ema === null) {
-      // seed with SMA
-      if (i >= period - 1) {
-        let sum = 0;
-        for (let j = i - period + 1; j <= i; j++) sum += closes[j];
-        ema = sum / period;
-        out[i] = ema;
-      }
-    } else {
-      ema = closes[i] * k + ema * (1 - k);
-      out[i] = ema;
+// ═══════════════════════════════════════════════════
+// MATH
+// ═══════════════════════════════════════════════════
+function ema(arr, n) {
+  const k = 2 / (n + 1), out = new Array(arr.length).fill(null);
+  let val = null, cnt = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] == null) continue;
+    if (val === null) {
+      cnt++;
+      if (cnt === 1) val = arr[i];
+      else { val += arr[i]; if (cnt === n) { val /= n; out[i] = val; } }
+      continue;
     }
+    val = arr[i] * k + val * (1 - k);
+    out[i] = val;
   }
   return out;
 }
 
-function calcBB(closes, period=20, mult=2) {
-  const mid = [], upper = [], lower = [];
+function tema(arr, n) {
+  const e1 = ema(arr, n);
+  const e2 = ema(e1, n);
+  const e3 = ema(e2, n);
+  return arr.map((_, i) =>
+    e1[i] != null && e2[i] != null && e3[i] != null ? 3*e1[i] - 3*e2[i] + e3[i] : null
+  );
+}
+
+function bb(closes, n=20, mult=2) {
+  const mid=[], up=[], lo=[];
   for (let i = 0; i < closes.length; i++) {
-    if (i < period - 1) { mid.push(null); upper.push(null); lower.push(null); continue; }
-    let sum = 0, sumSq = 0;
-    for (let j = i - period + 1; j <= i; j++) { sum += closes[j]; sumSq += closes[j]*closes[j]; }
-    const m = sum / period;
-    const variance = sumSq/period - m*m;
-    const sd = Math.sqrt(Math.max(0, variance));
-    mid.push(m); upper.push(m + mult*sd); lower.push(m - mult*sd);
+    if (i < n-1) { mid.push(null); up.push(null); lo.push(null); continue; }
+    let s=0, s2=0;
+    for (let j=i-n+1; j<=i; j++) { s+=closes[j]; s2+=closes[j]*closes[j]; }
+    const m=s/n, sd=Math.sqrt(Math.max(0, s2/n - m*m));
+    mid.push(m); up.push(m+mult*sd); lo.push(m-mult*sd);
   }
-  return { mid, upper, lower };
+  return {mid,up,lo};
 }
 
-function calcRSI(closes, period=14) {
+function rsi(closes, n=14) {
   const out = new Array(closes.length).fill(null);
-  if (closes.length < period + 1) return out;
-  let avgGain = 0, avgLoss = 0;
-  for (let i = 1; i <= period; i++) {
-    const diff = closes[i] - closes[i-1];
-    if (diff > 0) avgGain += diff; else avgLoss -= diff;
+  if (closes.length < n+1) return out;
+  let ag=0, al=0;
+  for (let i=1; i<=n; i++) {
+    const d=closes[i]-closes[i-1];
+    if (d>0) ag+=d; else al-=d;
   }
-  avgGain /= period; avgLoss /= period;
-  out[period] = 100 - 100 / (1 + (avgLoss === 0 ? Infinity : avgGain/avgLoss));
-  for (let i = period + 1; i < closes.length; i++) {
-    const diff = closes[i] - closes[i-1];
-    const gain = diff > 0 ? diff : 0;
-    const loss = diff < 0 ? -diff : 0;
-    avgGain = (avgGain * (period-1) + gain) / period;
-    avgLoss = (avgLoss * (period-1) + loss) / period;
-    out[i] = 100 - 100 / (1 + (avgLoss === 0 ? 9999 : avgGain/avgLoss));
+  ag/=n; al/=n;
+  out[n] = 100 - 100/(1+(al===0?9999:ag/al));
+  for (let i=n+1; i<closes.length; i++) {
+    const d=closes[i]-closes[i-1];
+    ag=(ag*(n-1)+(d>0?d:0))/n;
+    al=(al*(n-1)+(d<0?-d:0))/n;
+    out[i]=100-100/(1+(al===0?9999:ag/al));
   }
   return out;
 }
 
-function calcMACD(closes, fast=12, slow=26, signal=9) {
-  const emaFast = calcEMA(closes, fast);
-  const emaSlow = calcEMA(closes, slow);
-  const macdLine = closes.map((_, i) => (emaFast[i] != null && emaSlow[i] != null) ? emaFast[i] - emaSlow[i] : null);
-  const signalLine = calcEMA(macdLine, signal);
-  const hist = macdLine.map((v, i) => (v != null && signalLine[i] != null) ? v - signalLine[i] : null);
-  return { macdLine, signalLine, hist };
+function macd(closes, fast=12, slow=26, sig=9) {
+  const ef=ema(closes,fast), es=ema(closes,slow);
+  const ml=closes.map((_,i)=>ef[i]!=null&&es[i]!=null?ef[i]-es[i]:null);
+  const sl=ema(ml,sig);
+  const hist=ml.map((v,i)=>v!=null&&sl[i]!=null?v-sl[i]:null);
+  return {ml,sl,hist};
 }
 
-function calcVWAP(candles) {
-  // Daily VWAP - resets each UTC day
-  const out = [];
-  let cumVolume = 0, cumTypVolume = 0;
-  let curDay = -1;
+function vwap(candles) {
+  const out=[]; let cv=0, ctv=0, curDay=-1;
   for (const c of candles) {
-    const day = Math.floor(c.time / 86400);
-    if (day !== curDay) { curDay = day; cumVolume = 0; cumTypVolume = 0; }
-    const typ = (c.high + c.low + c.close) / 3;
-    cumTypVolume += typ * c.volume;
-    cumVolume += c.volume;
-    out.push(cumVolume > 0 ? cumTypVolume / cumVolume : null);
+    const day=Math.floor(c.time/86400);
+    if (day!==curDay){curDay=day;cv=0;ctv=0;}
+    const typ=(c.high+c.low+c.close)/3;
+    ctv+=typ*c.volume; cv+=c.volume;
+    out.push(cv>0?ctv/cv:null);
   }
   return out;
 }
 
-// ══════════════════════════════════════════════════════════════════
-// CHART COLORS
-// ══════════════════════════════════════════════════════════════════
-const CHART_COLORS = {
-  ema9:   '#58a6ff',
-  ema21:  '#ffa657',
-  ema50:  '#bc8cff',
-  ema200: '#f85149',
-  bbMid:  '#d29922',
-  bbUp:   'rgba(210,153,34,0.5)',
-  bbLow:  'rgba(210,153,34,0.5)',
-  vwap:   '#3fb950',
-  macdLine:   '#58a6ff',
-  signalLine: '#ffa657',
-  rsiLine:    '#bc8cff',
-  rsi70:      'rgba(248,81,73,0.3)',
-  rsi30:      'rgba(63,185,80,0.3)',
-};
-
-// ══════════════════════════════════════════════════════════════════
-// FETCH CANDLES
-// ══════════════════════════════════════════════════════════════════
-async function fetchCandles(tf, limit=500) {
-  const url = `${BINANCE_REST}/klines?symbol=${SYMBOL}&interval=${tf}&limit=${limit}`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error('fetch failed');
-  const raw = await resp.json();
-  return raw.map(k => ({
-    time: Math.floor(k[0] / 1000),
-    open: parseFloat(k[1]),
-    high: parseFloat(k[2]),
-    low:  parseFloat(k[3]),
-    close:parseFloat(k[4]),
-    volume: parseFloat(k[5]),
-  }));
+// ═══════════════════════════════════════════════════
+// PERIOD → STYLE
+// ═══════════════════════════════════════════════════
+function periodStyle(period) {
+  // log scale: period 1→thin/light, 2000→thick/opaque
+  const t = Math.min(1, Math.log10(period+1) / Math.log10(2001));
+  return {
+    lineWidth: 0.5 + t * 2.5,
+    opacity:   0.25 + t * 0.75,
+  };
 }
 
-// ══════════════════════════════════════════════════════════════════
-// BUILD PANEL
-// ══════════════════════════════════════════════════════════════════
-function buildPanelDOM(panelIdx) {
-  const el = document.getElementById(`panel-${panelIdx}`);
+function applyOpacity(hexColor, opacity) {
+  const r=parseInt(hexColor.slice(1,3),16);
+  const g=parseInt(hexColor.slice(3,5),16);
+  const b=parseInt(hexColor.slice(5,7),16);
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+// ═══════════════════════════════════════════════════
+// FETCH CANDLES (up to 2000 via 2 requests)
+// ═══════════════════════════════════════════════════
+function parseK(k) {
+  return { time:Math.floor(k[0]/1000), open:+k[1], high:+k[2], low:+k[3], close:+k[4], volume:+k[5] };
+}
+
+async function fetchCandles(tf) {
+  const url1 = `${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000`;
+  const r1 = await fetch(url1);
+  const d1 = await r1.json();
+  const c1 = d1.map(parseK);
+
+  // second batch: 1000 candles before the first one
+  const endTime = d1[0][0]; // open time of oldest candle
+  const url2 = `${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000&endTime=${endTime-1}`;
+  const r2 = await fetch(url2);
+  const d2 = await r2.json();
+  const c2 = d2.map(parseK);
+
+  return [...c2, ...c1];
+}
+
+// ═══════════════════════════════════════════════════
+// INDICATOR COLOR ASSIGNMENT
+// ═══════════════════════════════════════════════════
+let _paletteIdx = 0;
+function nextColor() { return PALETTE[(_paletteIdx++) % PALETTE.length]; }
+
+function indLabel(ind) {
+  if (ind.type==='ema')  return `EMA${ind.p}`;
+  if (ind.type==='tema') return `TEMA${ind.p}`;
+  if (ind.type==='bb')   return `BB${ind.p}`;
+  if (ind.type==='vwap') return 'VWAP';
+  if (ind.type==='vpvr') return 'VPVR';
+  return ind.type.toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD PANEL DOM
+// ═══════════════════════════════════════════════════
+function buildPanelDOM(pi) {
+  const el = document.getElementById(`panel-${pi}`);
+  const p = panels[pi];
   el.innerHTML = '';
 
-  const p = panels[panelIdx];
-  const tfOptions = Object.keys(TF_LABELS).map(tf =>
-    `<option value="${tf}" ${tf === p.tf ? 'selected' : ''}>${tf} ${TF_LABELS[tf]}</option>`
-  ).join('');
+  // header
+  const ph = document.createElement('div');
+  ph.className = 'ph';
+  ph.id = `ph-${pi}`;
+  ph.style.position = 'relative';
 
-  const subOptions = `
-    <option value="vol" ${p.sub==='vol'?'selected':''}>VOL</option>
-    <option value="rsi" ${p.sub==='rsi'?'selected':''}>RSI</option>
-    <option value="macd" ${p.sub==='macd'?'selected':''}>MACD</option>
-  `;
+  const tfSel = document.createElement('select');
+  tfSel.className = 'tf-sel';
+  TF_LIST.forEach(tf => {
+    const o = document.createElement('option');
+    o.value = tf; o.textContent = tf;
+    if (tf === p.tf) o.selected = true;
+    tfSel.appendChild(o);
+  });
+  tfSel.onchange = () => changeTF(pi, tfSel.value);
 
-  const togglesHTML = IND_DEFS.map(d => {
-    const on = p.inds.includes(d.key) ? 'on' : 'off';
-    return `<button class="ind-toggle ${d.cls} ${on}" data-ind="${d.key}" data-panel="${panelIdx}" onclick="toggleInd(${panelIdx},'${d.key}')">${d.label}</button>`;
-  }).join('');
+  const chips = document.createElement('div');
+  chips.className = 'ind-chips';
+  chips.id = `chips-${pi}`;
 
-  el.innerHTML = `
-    <div class="panel-header">
-      <span class="panel-title">面板 ${panelIdx+1}</span>
-      <select class="tf-select" onchange="changeTF(${panelIdx},this.value)">${tfOptions}</select>
-      <div class="ind-toggles">${togglesHTML}</div>
-      <select class="tf-select" style="margin-left:4px;" onchange="changeSub(${panelIdx},this.value)">${subOptions}</select>
-      <span class="panel-last-price" id="panel-price-${panelIdx}">--</span>
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.textContent = '+';
+  addBtn.title = '添加指标';
+  addBtn.onclick = (e) => { e.stopPropagation(); togglePopover(pi); };
+
+  const subSel = document.createElement('select');
+  subSel.className = 'sub-sel';
+  [['vol','VOL'],['rsi','RSI'],['macd','MACD'],['none','无']].forEach(([v,l]) => {
+    const o = document.createElement('option');
+    o.value=v; o.textContent=l;
+    if (v===p.sub) o.selected=true;
+    subSel.appendChild(o);
+  });
+  subSel.onchange = () => changeSub(pi, subSel.value);
+
+  const priceEl = document.createElement('span');
+  priceEl.className = 'ph-price';
+  priceEl.id = `pp-${pi}`;
+
+  ph.append(tfSel, chips, addBtn, subSel, priceEl);
+
+  // popover
+  const pop = document.createElement('div');
+  pop.className = 'ind-popover';
+  pop.id = `pop-${pi}`;
+  pop.innerHTML = `
+    <button class="pop-close" onclick="closePopover(${pi})">✕</button>
+    <div class="pop-row">
+      <span class="pop-label">类型</span>
+      <select class="pop-sel" id="pop-type-${pi}" onchange="onPopTypeChange(${pi})">
+        <option value="ema">EMA</option>
+        <option value="tema">TEMA</option>
+        <option value="bb">布林带 BB</option>
+        <option value="vwap">VWAP</option>
+        <option value="vpvr">VPVR</option>
+      </select>
     </div>
-    <div class="chart-wrapper" id="chart-wrapper-${panelIdx}">
-      <div class="loading-overlay" id="loading-${panelIdx}"><div class="spinner"></div>加载中...</div>
+    <div class="pop-row" id="pop-period-row-${pi}">
+      <span class="pop-label">周期</span>
+      <input class="pop-input" id="pop-p-${pi}" type="number" min="1" max="2000" value="20">
+    </div>
+    <div class="pop-row" id="pop-mult-row-${pi}" style="display:none">
+      <span class="pop-label">倍数</span>
+      <input class="pop-input" id="pop-m-${pi}" type="number" min="0.5" max="5" step="0.5" value="2">
+    </div>
+    <div class="vpvr-opts" id="pop-vpvr-${pi}" style="display:none">
+      <label>行数 <input type="range" min="10" max="100" value="30" id="vpvr-rows-${pi}" oninput="document.getElementById('vr-val-${pi}').textContent=this.value"><span class="vval" id="vr-val-${pi}">30</span></label>
+      <label>宽度% <input type="range" min="5" max="40" value="18" id="vpvr-w-${pi}" oninput="document.getElementById('vw-val-${pi}').textContent=this.value"><span class="vval" id="vw-val-${pi}">18</span></label>
+    </div>
+    <div class="pop-row">
+      <button class="pop-add-btn" onclick="doAddInd(${pi})">添加</button>
     </div>
   `;
+  ph.appendChild(pop);
+
+  // chart wrapper
+  const cw = document.createElement('div');
+  cw.className = 'cw';
+  cw.id = `cw-${pi}`;
+
+  const loadEl = document.createElement('div');
+  loadEl.className = 'loading';
+  loadEl.id = `load-${pi}`;
+  loadEl.innerHTML = '<div class="spinner"></div>加载中...';
+  cw.appendChild(loadEl);
+
+  el.append(ph, cw);
+  renderChips(pi);
 }
 
-async function initPanel(panelIdx) {
-  buildPanelDOM(panelIdx);
-  await loadPanel(panelIdx);
+function renderChips(pi) {
+  const p = panels[pi];
+  const chips = document.getElementById(`chips-${pi}`);
+  if (!chips) return;
+  chips.innerHTML = '';
+  for (const ind of p.inds) {
+    const chip = document.createElement('div');
+    chip.className = 'ind-chip';
+    chip.style.borderColor = ind.color;
+    chip.style.color = ind.color;
+    chip.innerHTML = `<span>${indLabel(ind)}</span><span class="rm" onclick="removeInd(${pi},'${ind.id}')">✕</span>`;
+    chips.appendChild(chip);
+  }
 }
 
-async function loadPanel(panelIdx) {
-  const p = panels[panelIdx];
-  const wrapper = document.getElementById(`chart-wrapper-${panelIdx}`);
+function onPopTypeChange(pi) {
+  const type = document.getElementById(`pop-type-${pi}`).value;
+  document.getElementById(`pop-period-row-${pi}`).style.display = (type==='vwap'||type==='vpvr') ? 'none' : '';
+  document.getElementById(`pop-mult-row-${pi}`).style.display  = type==='bb' ? '' : 'none';
+  document.getElementById(`pop-vpvr-${pi}`).style.display      = type==='vpvr' ? '' : 'none';
+}
 
-  // Clear previous chart
-  if (p.chart) { p.chart.remove(); p.chart = null; }
+function togglePopover(pi) {
+  const pop = document.getElementById(`pop-${pi}`);
+  const isOpen = pop.classList.contains('open');
+  // close all
+  document.querySelectorAll('.ind-popover').forEach(p => p.classList.remove('open'));
+  if (!isOpen) pop.classList.add('open');
+}
+
+function closePopover(pi) {
+  const pop = document.getElementById(`pop-${pi}`);
+  if (pop) pop.classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ph')) {
+    document.querySelectorAll('.ind-popover').forEach(p => p.classList.remove('open'));
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// INIT & LOAD PANEL
+// ═══════════════════════════════════════════════════
+async function initPanel(pi) {
+  buildPanelDOM(pi);
+  await loadPanel(pi);
+}
+
+async function loadPanel(pi) {
+  const p = panels[pi];
+  const cw = document.getElementById(`cw-${pi}`);
+
+  // cleanup
+  if (p.chart)    { p.chart.remove();    p.chart = null; }
   if (p.subChart) { p.subChart.remove(); p.subChart = null; }
-  if (p.ws) { p.ws.close(); p.ws = null; }
+  if (p.ws)       { try { p.ws.close(); } catch(_){} p.ws = null; }
+  if (p.vpvrRaf)  { cancelAnimationFrame(p.vpvrRaf); p.vpvrRaf = null; }
 
-  // Clear wrapper children except loading overlay
-  const loadEl = document.getElementById(`loading-${panelIdx}`);
-  wrapper.innerHTML = '';
-  const loadOverlay = document.createElement('div');
-  loadOverlay.className = 'loading-overlay';
-  loadOverlay.id = `loading-${panelIdx}`;
-  loadOverlay.innerHTML = '<div class="spinner"></div>加载中...';
-  wrapper.appendChild(loadOverlay);
+  // rebuild wrapper content
+  cw.innerHTML = '<div class="loading" id="load-'+pi+'"><div class="spinner"></div>加载中...</div>';
 
   try {
-    const candles = await fetchCandles(p.tf, 600);
+    const candles = await fetchCandles(p.tf);
     p.candles = candles;
+    const closes = candles.map(c => c.close);
+    const times  = candles.map(c => c.time);
 
-    // Layout: main chart + sub chart
-    const SUB_H = 90;
-    const wrapH = wrapper.clientHeight || 300;
-    const mainH = wrapH - SUB_H - 2;
+    const cwH = cw.clientHeight || 400;
+    const cwW = cw.clientWidth  || 800;
+    const mainH = cwH - SUB_H - 2;
 
-    // Main chart div
+    // Main div
     const mainDiv = document.createElement('div');
     mainDiv.style.cssText = `position:absolute;left:0;right:0;top:0;height:${mainH}px;`;
-    wrapper.appendChild(mainDiv);
+    cw.appendChild(mainDiv);
 
-    // Sub chart div
+    // Sub div
     const subDiv = document.createElement('div');
     subDiv.style.cssText = `position:absolute;left:0;right:0;bottom:0;height:${SUB_H}px;`;
-    wrapper.appendChild(subDiv);
+    cw.appendChild(subDiv);
 
+    // VPVR canvas (over main chart)
+    const vpvrCanvas = document.createElement('canvas');
+    vpvrCanvas.style.cssText = `position:absolute;left:0;top:0;pointer-events:none;z-index:10;`;
+    vpvrCanvas.width = cwW; vpvrCanvas.height = mainH;
+    cw.appendChild(vpvrCanvas);
+    p.vpvrCanvas = vpvrCanvas;
+
+    // Sub label
     const subLabel = document.createElement('div');
-    subLabel.className = 'sub-pane-label';
-    subLabel.id = `sub-label-${panelIdx}`;
-    subLabel.style.cssText = `position:absolute;left:8px;bottom:${SUB_H+4}px;`;
-    wrapper.appendChild(subLabel);
+    subLabel.className = 'sub-label';
+    subLabel.id = `sl-${pi}`;
+    cw.appendChild(subLabel);
 
-    // Create charts
     const chartOpts = {
-      layout: { background:{type:'Solid',color:'#0d1117'}, textColor:'#8b949e' },
-      grid: { vertLines:{color:'#161b22'}, horzLines:{color:'#161b22'} },
-      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-      rightPriceScale: { borderColor:'#30363d', scaleMargins:{top:0.08,bottom:0.02} },
-      timeScale: { borderColor:'#30363d', timeVisible:true, secondsVisible:false },
-      handleScroll: true,
-      handleScale: true,
+      layout:{ background:{type:'Solid',color:'#0d1117'}, textColor:'#8b949e' },
+      grid:{ vertLines:{color:'#1c2128'}, horzLines:{color:'#1c2128'} },
+      crosshair:{ mode: LightweightCharts.CrosshairMode.Normal },
+      rightPriceScale:{ borderColor:'#30363d', scaleMargins:{top:0.06,bottom:0.02} },
+      timeScale:{ borderColor:'#30363d', timeVisible:true, secondsVisible:false },
+      handleScroll:true, handleScale:true,
     };
 
-    p.chart = LightweightCharts.createChart(mainDiv, { ...chartOpts, height: mainH });
+    p.chart = LightweightCharts.createChart(mainDiv, { ...chartOpts, height: mainH, width: cwW });
     p.subChart = LightweightCharts.createChart(subDiv, {
       ...chartOpts,
-      height: SUB_H,
-      rightPriceScale: { borderColor:'#30363d', scaleMargins:{top:0.1,bottom:0.1} },
-      timeScale: { visible: false, borderColor:'#30363d' },
+      height: SUB_H, width: cwW,
+      rightPriceScale:{ borderColor:'#30363d', scaleMargins:{top:0.08,bottom:0.08} },
+      timeScale:{ visible:false, borderColor:'#30363d' },
     });
 
-    // Candles
+    // Candle series
     p.candleSeries = p.chart.addCandlestickSeries({
       upColor:'#3fb950', downColor:'#f85149',
       borderUpColor:'#3fb950', borderDownColor:'#f85149',
@@ -598,456 +523,491 @@ async function loadPanel(panelIdx) {
     });
     p.candleSeries.setData(candles);
 
-    // Sync time scales
+    // Show all loaded data
+    p.chart.timeScale().fitContent();
+
+    // Sync subChart time scale
     p.chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
-      if (range) p.subChart.timeScale().setVisibleLogicalRange(range);
+      if (range && p.subChart) p.subChart.timeScale().setVisibleLogicalRange(range);
+      scheduleVpvr(pi);
     });
 
-    // Draw indicators
     p.seriesMap = {};
-    drawIndicators(panelIdx);
+    drawAllInds(pi);
+    drawSub(pi);
 
-    // Sub pane
-    drawSubPane(panelIdx);
+    // crosshair info
+    p.chart.subscribeCrosshairMove(param => onCross(pi, param));
 
-    // Crosshair sync info
-    p.chart.subscribeCrosshairMove(param => onCrosshair(panelIdx, param));
-
-    // Remove loading
-    loadOverlay.remove();
-
-    // Last price
-    updatePanelPrice(panelIdx);
-
-    // WebSocket
-    subscribeKline(panelIdx);
+    document.getElementById(`load-${pi}`)?.remove();
+    updatePanelPrice(pi);
+    subscribeKline(pi);
+    scheduleVpvr(pi);
 
   } catch(e) {
-    loadOverlay.innerHTML = `<span style="color:var(--red)">加载失败: ${e.message}</span>`;
+    const l = document.getElementById(`load-${pi}`);
+    if (l) l.innerHTML = `<span style="color:var(--red)">加载失败: ${e.message}</span>`;
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// INDICATORS DRAWING
-// ══════════════════════════════════════════════════════════════════
-function drawIndicators(panelIdx) {
-  const p = panels[panelIdx];
-  const candles = p.candles;
-  const closes = candles.map(c=>c.close);
-  const times  = candles.map(c=>c.time);
+// ═══════════════════════════════════════════════════
+// DRAW INDICATORS
+// ═══════════════════════════════════════════════════
+function toLD(arr, times) {
+  return arr.map((v,i) => v!=null ? {time:times[i], value:v} : null).filter(Boolean);
+}
 
-  // Remove old series
-  for (const [key, series] of Object.entries(p.seriesMap||{})) {
-    try { if (series && series._series !== undefined) p.chart.removeSeries(series); } catch(_){}
+function drawAllInds(pi) {
+  const p = panels[pi];
+  if (!p.chart || !p.candles) return;
+  const candles = p.candles;
+  const closes  = candles.map(c=>c.close);
+  const times   = candles.map(c=>c.time);
+
+  // Remove old overlay series (not candles, not sub)
+  for (const s of Object.values(p.seriesMap||{})) {
+    try { p.chart.removeSeries(s); } catch(_){}
   }
   p.seriesMap = {};
 
-  const addLine = (color, lineWidth=1, priceLineVisible=false) =>
-    p.chart.addLineSeries({ color, lineWidth, priceLineVisible, lastValueVisible: false, crosshairMarkerVisible: false });
+  for (const ind of p.inds) {
+    if (ind.type === 'vpvr') continue; // drawn on canvas
 
-  function toLineData(arr) {
-    return arr.map((v,i) => v != null ? {time:times[i],value:v} : null).filter(Boolean);
-  }
+    const { lineWidth, opacity } = (ind.p != null) ? periodStyle(ind.p) : { lineWidth:1.5, opacity:0.8 };
+    const color = applyOpacity(ind.color, opacity);
 
-  const inds = p.inds;
+    const addLine = (col=color, lw=lineWidth) => p.chart.addLineSeries({
+      color:col, lineWidth:lw,
+      priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false,
+    });
 
-  if (inds.includes('ema9')) {
-    const s = addLine(CHART_COLORS.ema9, 1.5);
-    s.setData(toLineData(calcEMA(closes,9)));
-    p.seriesMap.ema9 = s;
-  }
-  if (inds.includes('ema21')) {
-    const s = addLine(CHART_COLORS.ema21, 1.5);
-    s.setData(toLineData(calcEMA(closes,21)));
-    p.seriesMap.ema21 = s;
-  }
-  if (inds.includes('ema50')) {
-    const s = addLine(CHART_COLORS.ema50, 1.5);
-    s.setData(toLineData(calcEMA(closes,50)));
-    p.seriesMap.ema50 = s;
-  }
-  if (inds.includes('ema200')) {
-    const s = addLine(CHART_COLORS.ema200, 2);
-    s.setData(toLineData(calcEMA(closes,200)));
-    p.seriesMap.ema200 = s;
-  }
-  if (inds.includes('bb')) {
-    const bb = calcBB(closes);
-    const sMid = addLine(CHART_COLORS.bbMid, 1);
-    sMid.setData(toLineData(bb.mid));
-    const sUp = addLine(CHART_COLORS.bbUp, 1);
-    sUp.setData(toLineData(bb.upper));
-    const sLow = addLine(CHART_COLORS.bbLow, 1);
-    sLow.setData(toLineData(bb.lower));
-    p.seriesMap.bbMid = sMid; p.seriesMap.bbUp = sUp; p.seriesMap.bbLow = sLow;
-  }
-  if (inds.includes('vwap')) {
-    const vwap = calcVWAP(candles);
-    const s = addLine(CHART_COLORS.vwap, 1.5);
-    s.setData(toLineData(vwap));
-    p.seriesMap.vwap = s;
+    if (ind.type === 'ema') {
+      const s = addLine();
+      s.setData(toLD(ema(closes, ind.p), times));
+      p.seriesMap[ind.id] = s;
+    }
+    else if (ind.type === 'tema') {
+      const s = addLine();
+      s.setData(toLD(tema(closes, ind.p), times));
+      p.seriesMap[ind.id] = s;
+    }
+    else if (ind.type === 'bb') {
+      const b = bb(closes, ind.p, ind.m||2);
+      const smid = addLine(applyOpacity(ind.color, opacity), lineWidth);
+      const sup  = addLine(applyOpacity(ind.color, opacity*0.5), Math.max(0.5, lineWidth-0.5));
+      const slo  = addLine(applyOpacity(ind.color, opacity*0.5), Math.max(0.5, lineWidth-0.5));
+      smid.setData(toLD(b.mid, times));
+      sup.setData(toLD(b.up,  times));
+      slo.setData(toLD(b.lo,  times));
+      p.seriesMap[ind.id+'_mid'] = smid;
+      p.seriesMap[ind.id+'_up']  = sup;
+      p.seriesMap[ind.id+'_lo']  = slo;
+    }
+    else if (ind.type === 'vwap') {
+      const s = addLine(applyOpacity(ind.color, 0.85), 1.5);
+      s.setData(toLD(vwap(candles), times));
+      p.seriesMap[ind.id] = s;
+    }
   }
 }
 
-function drawSubPane(panelIdx) {
-  const p = panels[panelIdx];
-  const candles = p.candles;
-  const closes = candles.map(c=>c.close);
-  const times  = candles.map(c=>c.time);
+// ═══════════════════════════════════════════════════
+// VPVR CANVAS
+// ═══════════════════════════════════════════════════
+function scheduleVpvr(pi) {
+  const p = panels[pi];
+  if (p.vpvrRaf) cancelAnimationFrame(p.vpvrRaf);
+  p.vpvrRaf = requestAnimationFrame(() => drawVpvr(pi));
+}
 
-  // Remove old sub series
-  for (const [key, s] of Object.entries(p.subSeriesMap||{})) {
+function drawVpvr(pi) {
+  const p = panels[pi];
+  const canvas = p.vpvrCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Find active VPVR indicator
+  const vpvrInd = p.inds.find(i => i.type === 'vpvr');
+  if (!vpvrInd || !p.chart || !p.candles.length) return;
+
+  const rows   = vpvrInd.rows  || 30;
+  const widthPct = vpvrInd.width || 18;
+
+  // Get visible logical range → candle indices
+  const logRange = p.chart.timeScale().getVisibleLogicalRange();
+  if (!logRange) return;
+  const from = Math.max(0, Math.floor(logRange.from));
+  const to   = Math.min(p.candles.length-1, Math.ceil(logRange.to));
+  const vis  = p.candles.slice(from, to+1);
+  if (vis.length < 2) return;
+
+  const minP = Math.min(...vis.map(c=>c.low));
+  const maxP = Math.max(...vis.map(c=>c.high));
+  const range = maxP - minP;
+  if (range === 0) return;
+
+  const rowSize = range / rows;
+  const vols = new Array(rows).fill(0);
+  for (const c of vis) {
+    const r0 = Math.max(0,    Math.floor((c.low  - minP) / rowSize));
+    const r1 = Math.min(rows-1, Math.floor((c.high - minP) / rowSize));
+    const cnt = r1 - r0 + 1;
+    for (let r = r0; r <= r1; r++) vols[r] += c.volume / cnt;
+  }
+
+  const maxVol = Math.max(...vols);
+  const canvasW = canvas.width;
+  const barMaxW = canvasW * widthPct / 100;
+
+  for (let r = 0; r < rows; r++) {
+    const pBot = minP + r * rowSize;
+    const pTop = pBot + rowSize;
+    const yBot = p.candleSeries.priceToCoordinate(pBot);
+    const yTop = p.candleSeries.priceToCoordinate(pTop);
+    if (yBot == null || yTop == null) continue;
+
+    const y  = Math.min(yBot, yTop);
+    const bH = Math.max(1, Math.abs(yBot - yTop) - 1);
+    const bW = (vols[r] / maxVol) * barMaxW;
+
+    // color: POC (max vol) highlighted
+    const isPOC = vols[r] === maxVol;
+    ctx.fillStyle = isPOC ? 'rgba(255,166,87,0.55)' : 'rgba(88,166,255,0.22)';
+    ctx.fillRect(canvasW - bW, y, bW, bH);
+
+    // POC line
+    if (isPOC) {
+      ctx.strokeStyle = 'rgba(255,166,87,0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y + bH/2);
+      ctx.lineTo(canvasW - bW, y + bH/2);
+      ctx.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SUB PANE
+// ═══════════════════════════════════════════════════
+function drawSub(pi) {
+  const p = panels[pi];
+  if (!p.subChart || !p.candles) return;
+  const candles = p.candles;
+  const closes  = candles.map(c=>c.close);
+  const times   = candles.map(c=>c.time);
+
+  for (const s of Object.values(p.subSeriesMap||{})) {
     try { p.subChart.removeSeries(s); } catch(_){}
   }
   p.subSeriesMap = {};
 
-  const subLabel = document.getElementById(`sub-label-${panelIdx}`);
+  const subLabel = document.getElementById(`sl-${pi}`);
+
+  if (p.sub === 'none') {
+    if (subLabel) subLabel.textContent = '';
+    return;
+  }
 
   if (p.sub === 'vol') {
     if (subLabel) subLabel.textContent = 'VOL';
-    const volSeries = p.subChart.addHistogramSeries({
-      color: '#8b949e',
-      priceFormat:{type:'volume'},
-      priceScaleId:'right',
-    });
-    volSeries.setData(candles.map(c => ({
-      time: c.time,
-      value: c.volume,
-      color: c.close >= c.open ? 'rgba(63,185,80,0.6)' : 'rgba(248,81,73,0.6)'
-    })));
-    p.subSeriesMap.vol = volSeries;
+    const vs = p.subChart.addHistogramSeries({ priceFormat:{type:'volume'}, lastValueVisible:false });
+    vs.setData(candles.map(c=>({ time:c.time, value:c.volume, color:c.close>=c.open?'rgba(63,185,80,.55)':'rgba(248,81,73,.55)' })));
+    p.subSeriesMap.vol = vs;
 
   } else if (p.sub === 'rsi') {
     if (subLabel) subLabel.textContent = 'RSI(14)';
-    const rsi = calcRSI(closes);
-    const rsiSeries = p.subChart.addLineSeries({ color: CHART_COLORS.rsiLine, lineWidth: 1.5, lastValueVisible: true, crosshairMarkerVisible: false });
-    rsiSeries.setData(rsi.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean));
-    p.subSeriesMap.rsi = rsiSeries;
-
-    // overbought/oversold lines
-    const ob = p.subChart.addLineSeries({ color:'rgba(248,81,73,0.5)', lineWidth:1, lastValueVisible:false, crosshairMarkerVisible:false });
-    ob.setData([{time:times[0],value:70},{time:times[times.length-1],value:70}]);
-    const os = p.subChart.addLineSeries({ color:'rgba(63,185,80,0.5)', lineWidth:1, lastValueVisible:false, crosshairMarkerVisible:false });
-    os.setData([{time:times[0],value:30},{time:times[times.length-1],value:30}]);
-    const mid50 = p.subChart.addLineSeries({ color:'rgba(139,148,158,0.25)', lineWidth:1, lastValueVisible:false, crosshairMarkerVisible:false });
-    mid50.setData([{time:times[0],value:50},{time:times[times.length-1],value:50}]);
-    p.subSeriesMap.ob=ob; p.subSeriesMap.os=os; p.subSeriesMap.mid50=mid50;
+    const r = rsi(closes);
+    const rs = p.subChart.addLineSeries({ color:'#bc8cff', lineWidth:1.5, lastValueVisible:true, crosshairMarkerVisible:false });
+    rs.setData(toLD(r, times));
+    const mk = (v,c) => {
+      const s = p.subChart.addLineSeries({color:c,lineWidth:1,lastValueVisible:false,crosshairMarkerVisible:false,priceLineVisible:false});
+      s.setData([{time:times[0],value:v},{time:times[times.length-1],value:v}]);
+      return s;
+    };
+    p.subSeriesMap = { rs, ob:mk(70,'rgba(248,81,73,.4)'), os:mk(30,'rgba(63,185,80,.4)'), mid:mk(50,'rgba(139,148,158,.2)') };
 
   } else if (p.sub === 'macd') {
     if (subLabel) subLabel.textContent = 'MACD(12,26,9)';
-    const { macdLine, signalLine, hist } = calcMACD(closes);
-    const histSeries = p.subChart.addHistogramSeries({ color:'#58a6ff', priceScaleId:'right', lastValueVisible:false });
-    histSeries.setData(hist.map((v,i)=>v!=null?{time:times[i],value:v,color:v>=0?'rgba(63,185,80,0.7)':'rgba(248,81,73,0.7)'}:null).filter(Boolean));
-    const macdS = p.subChart.addLineSeries({ color: CHART_COLORS.macdLine, lineWidth:1.5, lastValueVisible:true, crosshairMarkerVisible:false });
-    macdS.setData(macdLine.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean));
-    const sigS = p.subChart.addLineSeries({ color: CHART_COLORS.signalLine, lineWidth:1.5, lastValueVisible:true, crosshairMarkerVisible:false });
-    sigS.setData(signalLine.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean));
-    p.subSeriesMap.hist=histSeries; p.subSeriesMap.macd=macdS; p.subSeriesMap.sig=sigS;
+    const {ml,sl,hist} = macd(closes);
+    const hs = p.subChart.addHistogramSeries({ lastValueVisible:false });
+    hs.setData(hist.map((v,i)=>v!=null?{time:times[i],value:v,color:v>=0?'rgba(63,185,80,.6)':'rgba(248,81,73,.6)'}:null).filter(Boolean));
+    const ms = p.subChart.addLineSeries({ color:'#58a6ff', lineWidth:1.5, lastValueVisible:true, crosshairMarkerVisible:false });
+    ms.setData(toLD(ml, times));
+    const ss = p.subChart.addLineSeries({ color:'#ffa657', lineWidth:1.5, lastValueVisible:true, crosshairMarkerVisible:false });
+    ss.setData(toLD(sl, times));
+    p.subSeriesMap = { hs, ms, ss };
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// WEBSOCKET KLINE
-// ══════════════════════════════════════════════════════════════════
-function subscribeKline(panelIdx) {
-  const p = panels[panelIdx];
-  const stream = `btcusdt@kline_${p.tf}`;
-  const wsUrl = `wss://stream.binance.com:9443/ws/${stream}`;
-  if (p.ws) { try { p.ws.close(); } catch(_){} }
+// ═══════════════════════════════════════════════════
+// WEBSOCKET
+// ═══════════════════════════════════════════════════
+function subscribeKline(pi) {
+  const p = panels[pi];
+  const url = `wss://stream.binance.com:9443/ws/btcusdt@kline_${p.tf}`;
+  let retry = 1000;
 
-  let reconnectTimer = null;
   function connect() {
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(url);
     p.ws = ws;
-    ws.onmessage = (evt) => {
+    ws.onmessage = evt => {
       try {
-        const data = JSON.parse(evt.data);
-        const k = data.k;
+        const k = JSON.parse(evt.data).k;
         if (!k) return;
-        const candle = {
-          time:   Math.floor(k.t / 1000),
-          open:   parseFloat(k.o),
-          high:   parseFloat(k.h),
-          low:    parseFloat(k.l),
-          close:  parseFloat(k.c),
-          volume: parseFloat(k.v),
-        };
-        // Update or append
+        const c = { time:Math.floor(k.t/1000), open:+k.o, high:+k.h, low:+k.l, close:+k.c, volume:+k.v };
         const last = p.candles[p.candles.length-1];
-        if (last && last.time === candle.time) {
-          p.candles[p.candles.length-1] = candle;
-        } else if (!last || candle.time > last.time) {
-          p.candles.push(candle);
-          if (p.candles.length > 700) p.candles.shift();
-        }
-        if (p.candleSeries) p.candleSeries.update(candle);
-        if (k.x) { // candle closed - redraw indicators
-          drawIndicators(panelIdx);
-          drawSubPane(panelIdx);
-        }
-        updatePanelPrice(panelIdx);
-      } catch(e) {}
+        if (last && last.time === c.time) p.candles[p.candles.length-1] = c;
+        else if (!last || c.time > last.time) { p.candles.push(c); if(p.candles.length>2100) p.candles.shift(); }
+        if (p.candleSeries) p.candleSeries.update(c);
+        if (k.x) { drawAllInds(pi); drawSub(pi); }
+        updatePanelPrice(pi);
+        scheduleVpvr(pi);
+        retry = 1000;
+      } catch(_){}
     };
-    ws.onclose = () => {
-      reconnectTimer = setTimeout(connect, 3000);
-    };
-    ws.onerror = () => { ws.close(); };
+    ws.onclose = () => { setTimeout(connect, retry); retry = Math.min(retry*2, 16000); };
+    ws.onerror = () => ws.close();
   }
   connect();
 }
 
-// ══════════════════════════════════════════════════════════════════
-// TICKER WEBSOCKET (header price)
-// ══════════════════════════════════════════════════════════════════
-function startTickerWS() {
-  let reconnectTimer = null;
+function startTicker() {
+  let retry = 1000;
   function connect() {
     const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@miniTicker');
-    wsTickerSocket = ws;
-    ws.onmessage = (evt) => {
+    ws.onmessage = evt => {
       try {
         const d = JSON.parse(evt.data);
-        const price = parseFloat(d.c);
-        const open  = parseFloat(d.o);
-        const high  = parseFloat(d.h);
-        const low   = parseFloat(d.l);
-        const vol   = parseFloat(d.v);
-        const chg   = ((price - open) / open * 100);
-
-        document.getElementById('live-price').textContent = fmtPrice(price);
-        document.getElementById('live-price').className = chg >= 0 ? 'up' : 'down';
-        const chgEl = document.getElementById('price-change');
-        chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-        chgEl.className = 'price-change ' + (chg >= 0 ? 'up-bg' : 'down-bg');
-        document.getElementById('stat-high').textContent = fmtPrice(high);
-        document.getElementById('stat-high').style.color = 'var(--green)';
-        document.getElementById('stat-low').textContent = fmtPrice(low);
-        document.getElementById('stat-low').style.color = 'var(--red)';
-        document.getElementById('stat-vol').textContent = fmtVol(vol);
-      } catch(e){}
+        const price = +d.c, open = +d.o;
+        const chg = (price-open)/open*100;
+        document.getElementById('live-price').textContent = fmt(price);
+        document.getElementById('live-price').className = chg>=0?'up':'down';
+        const ce = document.getElementById('price-change');
+        ce.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+        ce.className = chg>=0?'up-bg':'down-bg';
+        document.getElementById('st-hi').textContent = fmt(+d.h);
+        document.getElementById('st-hi').style.color='var(--green)';
+        document.getElementById('st-lo').textContent = fmt(+d.l);
+        document.getElementById('st-lo').style.color='var(--red)';
+        document.getElementById('st-vol').textContent = fmtV(+d.v);
+        retry=1000;
+      } catch(_){}
     };
-    ws.onclose = () => { reconnectTimer = setTimeout(connect, 3000); };
-    ws.onerror = () => { ws.close(); };
+    ws.onclose = () => { setTimeout(connect, retry); retry=Math.min(retry*2,16000); };
+    ws.onerror = () => ws.close();
   }
   connect();
 }
 
-// ══════════════════════════════════════════════════════════════════
-// FUNDING RATE + OI (polled)
-// ══════════════════════════════════════════════════════════════════
-async function fetchFundingRate() {
+async function fetchFR() {
   try {
-    const r = await fetch(`${BINANCE_FAPI}/premiumIndex?symbol=${SYMBOL}`);
+    const r = await fetch(`${FAPI}/premiumIndex?symbol=${SYM}`);
     const d = await r.json();
-    const fr = parseFloat(d.lastFundingRate) * 100;
-    const el = document.getElementById('stat-fr');
-    el.textContent = (fr >= 0 ? '+' : '') + fr.toFixed(4) + '%';
-    el.style.color = fr >= 0 ? 'var(--green)' : 'var(--red)';
-  } catch(e){}
+    const fr = +d.lastFundingRate*100;
+    const el = document.getElementById('st-fr');
+    el.textContent = (fr>=0?'+':'')+fr.toFixed(4)+'%';
+    el.style.color = fr>=0?'var(--green)':'var(--red)';
+  } catch(_){}
+}
+async function fetchOI() {
+  try {
+    const r = await fetch(`${FAPI}/openInterest?symbol=${SYM}`);
+    const d = await r.json();
+    document.getElementById('st-oi').textContent = fmtV(+d.openInterest);
+  } catch(_){}
 }
 
-async function fetchOpenInterest() {
-  try {
-    const r = await fetch(`${BINANCE_FAPI}/openInterest?symbol=${SYMBOL}`);
-    const d = await r.json();
-    const oi = parseFloat(d.openInterest);
-    document.getElementById('stat-oi').textContent = fmtVol(oi);
-  } catch(e){}
+// ═══════════════════════════════════════════════════
+// INDICATOR MANAGEMENT
+// ═══════════════════════════════════════════════════
+function doAddInd(pi) {
+  const p = panels[pi];
+  const type  = document.getElementById(`pop-type-${pi}`).value;
+  const period = parseInt(document.getElementById(`pop-p-${pi}`)?.value||'0');
+  const mult   = parseFloat(document.getElementById(`pop-m-${pi}`)?.value||'2');
+
+  const ind = { id: 'i'+uid(), type, color: nextColor() };
+  if (type==='ema'||type==='tema') { ind.p = Math.max(1, Math.min(2000, period||20)); }
+  if (type==='bb')  { ind.p = Math.max(1, Math.min(500, period||20)); ind.m = mult; }
+  if (type==='vpvr') {
+    ind.rows  = parseInt(document.getElementById(`vpvr-rows-${pi}`).value)||30;
+    ind.width = parseInt(document.getElementById(`vpvr-w-${pi}`).value)||18;
+  }
+
+  p.inds.push(ind);
+  renderChips(pi);
+  closePopover(pi);
+  drawAllInds(pi);
+  scheduleVpvr(pi);
 }
 
-// ══════════════════════════════════════════════════════════════════
-// PANEL INTERACTIONS
-// ══════════════════════════════════════════════════════════════════
-function updatePanelPrice(panelIdx) {
-  const p = panels[panelIdx];
-  const last = p.candles && p.candles[p.candles.length-1];
+function removeInd(pi, id) {
+  const p = panels[pi];
+  p.inds = p.inds.filter(i => i.id !== id);
+  renderChips(pi);
+  drawAllInds(pi);
+  scheduleVpvr(pi);
+}
+
+function changeTF(pi, tf) {
+  panels[pi].tf = tf;
+  loadPanel(pi);
+}
+
+function changeSub(pi, sub) {
+  panels[pi].sub = sub;
+  drawSub(pi);
+}
+
+function updatePanelPrice(pi) {
+  const p = panels[pi];
+  const last = p.candles?.[p.candles.length-1];
   if (!last) return;
-  const el = document.getElementById(`panel-price-${panelIdx}`);
+  const el = document.getElementById(`pp-${pi}`);
   if (el) {
-    el.textContent = fmtPrice(last.close);
+    el.textContent = fmt(last.close);
     el.style.color = last.close >= last.open ? 'var(--green)' : 'var(--red)';
+    el.style.fontSize = '11px';
   }
 }
 
-function changeTF(panelIdx, tf) {
-  panels[panelIdx].tf = tf;
-  loadPanel(panelIdx);
-}
-
-function changeSub(panelIdx, sub) {
-  panels[panelIdx].sub = sub;
-  if (panels[panelIdx].subChart) drawSubPane(panelIdx);
-}
-
-function toggleInd(panelIdx, key) {
-  const p = panels[panelIdx];
-  const idx = p.inds.indexOf(key);
-  if (idx >= 0) p.inds.splice(idx, 1);
-  else p.inds.push(key);
-
-  // Update toggle button appearance
-  const btn = document.querySelector(`[data-panel="${panelIdx}"][data-ind="${key}"]`);
-  if (btn) {
-    btn.classList.toggle('on', p.inds.includes(key));
-    btn.classList.toggle('off', !p.inds.includes(key));
+function onCross(pi, param) {
+  const p = panels[pi];
+  if (!param.time || !p.candles) return;
+  const c = p.candles.find(x=>x.time===param.time);
+  if (!c) return;
+  const el = document.getElementById(`pp-${pi}`);
+  if (el) {
+    el.textContent = `O:${fmt(c.open)} H:${fmt(c.high)} L:${fmt(c.low)} C:${fmt(c.close)}`;
+    el.style.color = c.close>=c.open?'var(--green)':'var(--red)';
+    el.style.fontSize='10px';
   }
-
-  drawIndicators(panelIdx);
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // STRATEGY PRESETS
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 function applyStrategy(name) {
-  currentStrategy = name;
-  document.querySelectorAll('.strat-btn').forEach(b => b.classList.remove('active'));
+  currentStrat = name;
+  document.querySelectorAll('.strat-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(`btn-${name}`).classList.add('active');
+  _paletteIdx = 0;
 
   const preset = STRATEGIES[name];
-  panels.forEach((p, i) => {
-    if (preset.panels[i]) {
-      p.tf   = preset.panels[i].tf;
-      p.inds = [...preset.panels[i].inds];
-      p.sub  = preset.panels[i].sub;
-    }
+  panels.forEach((p,i) => {
+    if (!preset[i]) return;
+    p.tf  = preset[i].tf;
+    p.sub = preset[i].sub;
+    p.inds = preset[i].inds.map(cfg => {
+      const ind = { id:'i'+uid(), type:cfg.type, color:nextColor() };
+      if (cfg.p) ind.p = cfg.p;
+      if (cfg.m) ind.m = cfg.m;
+      return ind;
+    });
   });
-  panels.forEach((_, i) => initPanel(i));
+  panels.forEach((_,i)=>initPanel(i));
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // LAYOUT
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 function setLayout(name) {
   currentLayout = name;
-  document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.lay-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(`lay-${name}`).classList.add('active');
 
   const area = document.getElementById('charts-area');
-  area.className = `layout-${name}`;
+  area.className = `lay-${name}`;
 
-  // Rebuild 4th panel slot for 2x2
-  const panel3 = document.getElementById('panel-3');
-  if (name === '2x2') {
-    if (!panel3) {
-      const div = document.createElement('div');
-      div.className = 'chart-panel';
-      div.id = 'panel-3';
-      area.appendChild(div);
-      if (!panels[3]) {
-        const preset = STRATEGIES[currentStrategy];
-        const cfg = preset.panels[0]; // default
-        panels[3] = { tf: cfg.tf, inds: [...cfg.inds], sub: cfg.sub, candles:[], seriesMap:{}, subSeriesMap:{} };
-        initPanel(3);
-      }
+  const need4 = name==='2x2';
+  const p3el  = document.getElementById('panel-3');
+
+  if (need4 && !p3el) {
+    const div = document.createElement('div');
+    div.className='chart-panel'; div.id='panel-3';
+    area.appendChild(div);
+    if (!panels[3]) {
+      const cfg = STRATEGIES[currentStrat][0];
+      _paletteIdx = 0;
+      panels[3] = { tf:cfg.tf, sub:cfg.sub, inds:cfg.inds.map(c=>({id:'i'+uid(),type:c.type,color:nextColor(),p:c.p,m:c.m})), candles:[], seriesMap:{}, subSeriesMap:{} };
+      initPanel(3);
     }
-  } else {
-    if (panel3) panel3.remove();
+  } else if (!need4 && p3el) {
+    p3el.remove();
   }
 
-  // Resize existing charts
-  setTimeout(() => {
-    panels.forEach((p, i) => {
-      if (!document.getElementById(`panel-${i}`)) return;
-      if (p.chart) {
-        const w = document.getElementById(`chart-wrapper-${i}`);
-        if (w) {
-          const h = w.clientHeight;
-          const SUB_H = 90;
-          p.chart.resize(w.clientWidth, h - SUB_H - 2);
-          p.subChart.resize(w.clientWidth, SUB_H);
-        }
-      }
-    });
-  }, 50);
+  // resize existing
+  setTimeout(() => resizeAll(), 60);
 }
 
-// ══════════════════════════════════════════════════════════════════
-// CROSSHAIR
-// ══════════════════════════════════════════════════════════════════
-function onCrosshair(panelIdx, param) {
-  const p = panels[panelIdx];
-  if (!param.time || !p.candles) return;
-  const candle = p.candles.find(c => c.time === param.time);
-  if (!candle) return;
-  const el = document.getElementById(`panel-price-${panelIdx}`);
-  if (el) {
-    el.textContent = `O:${fmtPrice(candle.open)} H:${fmtPrice(candle.high)} L:${fmtPrice(candle.low)} C:${fmtPrice(candle.close)}`;
-    el.style.color = candle.close >= candle.open ? 'var(--green)' : 'var(--red)';
-    el.style.fontSize = '10px';
-  }
+function resizeAll() {
+  panels.forEach((p,i) => {
+    if (!p.chart) return;
+    const cw = document.getElementById(`cw-${i}`);
+    if (!cw) return;
+    const w=cw.clientWidth, h=cw.clientHeight;
+    if (!w||!h) return;
+    const mainH = h - SUB_H - 2;
+    p.chart.resize(w, mainH);
+    if (p.subChart) p.subChart.resize(w, SUB_H);
+    if (p.vpvrCanvas) { p.vpvrCanvas.width=w; p.vpvrCanvas.height=mainH; }
+    // reposition sub/main divs
+    const mainDiv = cw.children[0];
+    const subDiv  = cw.children[1];
+    if (mainDiv) mainDiv.style.height = mainH+'px';
+    if (subDiv)  subDiv.style.height  = SUB_H+'px';
+    scheduleVpvr(i);
+  });
 }
 
-// ══════════════════════════════════════════════════════════════════
-// FORMAT
-// ══════════════════════════════════════════════════════════════════
-function fmtPrice(p) {
-  if (p >= 100000) return p.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0});
-  return p.toLocaleString('en-US', {minimumFractionDigits:1,maximumFractionDigits:1});
+// ═══════════════════════════════════════════════════
+// RESIZE OBSERVER
+// ═══════════════════════════════════════════════════
+function setupResize() {
+  new ResizeObserver(resizeAll).observe(document.getElementById('charts-area'));
 }
 
-function fmtVol(v) {
-  if (v >= 1e9) return (v/1e9).toFixed(2)+'B';
-  if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
-  if (v >= 1e3) return (v/1e3).toFixed(1)+'K';
+// ═══════════════════════════════════════════════════
+// FORMAT HELPERS
+// ═══════════════════════════════════════════════════
+function fmt(p) {
+  return p >= 10000
+    ? p.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})
+    : p.toFixed(2);
+}
+function fmtV(v) {
+  if(v>=1e9) return (v/1e9).toFixed(2)+'B';
+  if(v>=1e6) return (v/1e6).toFixed(2)+'M';
+  if(v>=1e3) return (v/1e3).toFixed(1)+'K';
   return v.toFixed(0);
 }
 
-// ══════════════════════════════════════════════════════════════════
-// RESIZE OBSERVER
-// ══════════════════════════════════════════════════════════════════
-function setupResizeObserver() {
-  const observer = new ResizeObserver(() => {
-    panels.forEach((p, i) => {
-      if (!p.chart) return;
-      const w = document.getElementById(`chart-wrapper-${i}`);
-      if (!w) return;
-      const SUB_H = 90;
-      const wh = w.clientHeight;
-      const ww = w.clientWidth;
-      if (wh > 0 && ww > 0) {
-        p.chart.resize(ww, wh - SUB_H - 2);
-        if (p.subChart) p.subChart.resize(ww, SUB_H);
-
-        // reposition sub div
-        const mainDiv = w.children[0];
-        const subDiv  = w.children[1];
-        if (mainDiv) mainDiv.style.height = (wh - SUB_H - 2) + 'px';
-        if (subDiv)  subDiv.style.height  = SUB_H + 'px';
-      }
-    });
-  });
-  document.querySelectorAll('.chart-wrapper').forEach(el => observer.observe(el));
-}
-
-// ══════════════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════════
 async function init() {
+  _paletteIdx = 0;
   const preset = STRATEGIES['scalp'];
   for (let i = 0; i < 3; i++) {
     panels[i] = {
-      tf:   preset.panels[i].tf,
-      inds: [...preset.panels[i].inds],
-      sub:  preset.panels[i].sub,
-      candles: [],
-      seriesMap: {},
-      subSeriesMap: {},
-      chart: null,
-      subChart: null,
-      ws: null,
+      tf: preset[i].tf,
+      sub: preset[i].sub,
+      inds: preset[i].inds.map(c => ({ id:'i'+uid(), type:c.type, color:nextColor(), p:c.p, m:c.m })),
+      candles: [], seriesMap: {}, subSeriesMap: {},
+      chart:null, subChart:null, ws:null, vpvrCanvas:null, vpvrRaf:null,
     };
   }
 
-  // Init panels in parallel
-  await Promise.all(panels.map((_, i) => initPanel(i)));
+  await Promise.all(panels.map((_,i)=>initPanel(i)));
+  setupResize();
+  startTicker();
+  fetchFR(); fetchOI();
+  setInterval(()=>{ fetchFR(); fetchOI(); }, 30000);
 
-  setupResizeObserver();
-  startTickerWS();
-  fetchFundingRate();
-  fetchOpenInterest();
-
-  // Poll funding rate every 30s
-  setInterval(() => { fetchFundingRate(); fetchOpenInterest(); }, 30000);
+  // periodic VPVR redraw to catch price scale changes
+  setInterval(()=>panels.forEach((_,i)=>scheduleVpvr(i)), 500);
 }
 
 init();
