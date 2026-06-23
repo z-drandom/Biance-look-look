@@ -301,10 +301,16 @@ function drawVPVR(pi){
   }
 
   const maxV=Math.max(...vols);
-  // "short bar" threshold: bottom 20% of max volume (non-zero)
-  const nonzero=vols.filter(v=>v>0);
-  if(!nonzero.length) return;
-  const lowThresh=maxV*0.20;
+
+  // pick the 3 shortest non-empty rows to highlight (thin air / weak S-R zones)
+  const HIGHLIGHT_N=3;
+  const lowRows=new Set(
+    vols.map((v,r)=>({v,r}))
+        .filter(o=>o.v>0)
+        .sort((a,b)=>a.v-b.v)
+        .slice(0,HIGHLIGHT_N)
+        .map(o=>o.r)
+  );
 
   const W=canvas.width, barMaxW=W*wpct/100;
 
@@ -315,19 +321,9 @@ function drawVPVR(pi){
     if(yBot==null||yTop==null) continue;
     const y=Math.min(yBot,yTop), bH=Math.max(1,Math.abs(yBot-yTop)-1);
     const bW=vols[r]/maxV*barMaxW;
-    const isLow=vols[r]<=lowThresh;
 
-    ctx.fillStyle = isLow ? 'rgba(239,83,80,.5)' : 'rgba(41,98,255,.2)';
+    ctx.fillStyle = lowRows.has(r) ? 'rgba(239,83,80,.6)' : 'rgba(41,98,255,.2)';
     ctx.fillRect(W-bW, y, bW, bH);
-
-    // for thin air zones: extend a dashed line to the left
-    if(isLow){
-      ctx.strokeStyle='rgba(239,83,80,.55)';
-      ctx.lineWidth=.8;
-      ctx.setLineDash([3,4]);
-      ctx.beginPath(); ctx.moveTo(0,y+bH/2); ctx.lineTo(W-bW,y+bH/2); ctx.stroke();
-      ctx.setLineDash([]);
-    }
   }
 }
 
