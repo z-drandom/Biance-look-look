@@ -89,6 +89,11 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .vrow{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
 .vrow input[type=range]{flex:1;accent-color:var(--blue)}
 .vrow .vv{color:var(--text);font-weight:600;width:28px;text-align:right}
+/* tf chips in manager */
+.tf-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text);flex-shrink:0}
+.tf-chip.builtin{color:var(--text2)}
+.tf-chip .tcx{cursor:pointer;opacity:.4;font-size:9px;margin-left:1px}
+.tf-chip .tcx:hover{opacity:1;color:var(--red)}
 </style>
 </head>
 <body>
@@ -116,6 +121,21 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <!-- shared indicator chips -->
   <div id="sh-chips"></div>
   <button class="add-ind" id="global-add-btn" onclick="openPopAdd(this)">+</button>
+  <div class="isep"></div>
+  <button class="add-ind" id="tf-mgr-btn" onclick="openTFMgr(this)" title="管理时间周期">⏱+</button>
+</div>
+
+<!-- ── TF MANAGER POPOVER ── -->
+<div id="tfpop" style="position:fixed;z-index:1001;background:#1e222d;border:1px solid #363c4e;border-radius:6px;padding:12px 14px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:none;flex-direction:column;gap:9px">
+  <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" onclick="closeTFMgr()">✕</button>
+  <h4 style="font-size:12px;font-weight:700;color:var(--text)">管理时间周期</h4>
+  <div id="tf-chips" style="display:flex;flex-wrap:wrap;gap:4px;max-height:110px;overflow-y:auto"></div>
+  <div style="display:flex;gap:6px;align-items:center;border-top:1px solid var(--border);padding-top:8px">
+    <span style="color:var(--text2);font-size:11px;flex-shrink:0">新增：</span>
+    <input id="tf-custom-inp" class="ginp" placeholder="如 2m, 8h, 1M" style="flex:1" onkeydown="if(event.key==='Enter')addCustomTF()">
+    <button class="gbtn" style="padding:4px 10px" onclick="addCustomTF()">添加</button>
+  </div>
+  <div id="tf-err" style="color:var(--red);font-size:10px;display:none"></div>
 </div>
 
 <!-- ── 2×2 GRID ── -->
@@ -163,8 +183,22 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 // CONSTANTS
 // ══════════════════════════════════════════════
 const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
-const TFS=['1m','3m','5m','15m','30m','1h','2h','4h','6h','12h','1d','3d','1w'];
+// Binance官方支持的所有K线周期（含1s）
+const BINANCE_TFS=['1s','1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
 const PANEL_TFS=['3m','15m','1h','6h']; // 左上 右上 左下 右下
+
+// 将时间周期转为秒数，用于排序
+function tfToSec(tf){
+  const n=parseInt(tf);
+  const u=tf.slice(-1);
+  if(u==='s') return n;
+  if(u==='m') return n*60;
+  if(u==='h') return n*3600;
+  if(u==='d') return n*86400;
+  if(u==='w') return n*604800;
+  if(u==='M') return n*2592000;
+  return 0;
+}
 
 // EMA ramp: 6 steps light→prominent (color, lineWidth, chip font-size)
 const EMA_RAMP=[
@@ -195,6 +229,9 @@ let sharedInds=[];
 const POP={indId:null,mode:'add'};
 
 const panels=[]; // per-panel chart state (no ind ownership)
+
+// 用户可自定义的TF列表（从BINANCE_TFS开始，可添加/删除，按秒数排序）
+let userTFs=[...BINANCE_TFS];
 
 // ══════════════════════════════════════════════
 // INIT SHARED INDS
@@ -371,6 +408,98 @@ function removeSharedInd(id){
 }
 
 // ══════════════════════════════════════════════
+// TF MANAGER
+// ══════════════════════════════════════════════
+function sortedTFs(){
+  return [...userTFs].sort((a,b)=>tfToSec(a)-tfToSec(b));
+}
+
+function rebuildTFSelectors(){
+  const sorted=sortedTFs();
+  panels.forEach((p,pi)=>{
+    const sel=document.getElementById(`tf-sel-${pi}`);
+    if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='';
+    sorted.forEach(tf=>{
+      const o=document.createElement('option');
+      o.value=tf;o.textContent=tf;
+      if(tf===cur)o.selected=true;
+      sel.appendChild(o);
+    });
+    // if current tf was removed, keep panel TF unchanged
+    if(!sorted.includes(p.tf)){
+      p.tf=sorted[0]||'1m';
+      loadPanel(pi);
+    }
+  });
+}
+
+function renderTFChips(){
+  const c=document.getElementById('tf-chips');if(!c)return;
+  c.innerHTML='';
+  const sorted=sortedTFs();
+  sorted.forEach(tf=>{
+    const isBuiltin=BINANCE_TFS.includes(tf);
+    const chip=document.createElement('span');
+    chip.className='tf-chip'+(isBuiltin?' builtin':'');
+    chip.innerHTML=`${tf}<span class="tcx" data-tf="${tf}" title="移除">✕</span>`;
+    chip.querySelector('.tcx').onclick=e=>{
+      e.stopPropagation();
+      removeTF(tf);
+    };
+    c.appendChild(chip);
+  });
+}
+
+function removeTF(tf){
+  // 不允许删到只剩一个
+  if(userTFs.length<=1)return;
+  userTFs=userTFs.filter(t=>t!==tf);
+  renderTFChips();
+  rebuildTFSelectors();
+}
+
+function addCustomTF(){
+  const inp=document.getElementById('tf-custom-inp');
+  const err=document.getElementById('tf-err');
+  const val=inp.value.trim().toLowerCase();
+  err.style.display='none';
+  if(!val){err.textContent='请输入周期，如 2m';err.style.display='';return;}
+  // 简单格式校验: 数字 + s/m/h/d/w/M
+  if(!/^\d+[smhdwM]$/.test(val)&&!/^\d+M$/.test(val)){
+    err.textContent='格式不对，支持: 1s 2m 8h 3d 2w 1M';err.style.display='';return;
+  }
+  if(userTFs.includes(val)){err.textContent='该周期已存在';err.style.display='';return;}
+  userTFs.push(val);
+  inp.value='';
+  renderTFChips();
+  rebuildTFSelectors();
+}
+
+function openTFMgr(anchor){
+  closePop();
+  const pop=document.getElementById('tfpop');
+  if(pop.style.display==='flex'){closeTFMgr();return;}
+  renderTFChips();
+  pop.style.display='flex';
+  const rect=anchor.getBoundingClientRect();
+  let left=rect.right-260, top=rect.bottom+4;
+  if(left<4)left=4;
+  if(top+280>window.innerHeight)top=rect.top-290;
+  pop.style.left=left+'px';pop.style.top=top+'px';
+}
+
+function closeTFMgr(){
+  document.getElementById('tfpop').style.display='none';
+}
+
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('tfpop');
+  if(pop.style.display==='flex'&&!pop.contains(e.target)&&!e.target.closest('#tf-mgr-btn'))closeTFMgr();
+});
+
+// ══════════════════════════════════════════════
 // BUILD PANEL DOM (toolbar only: TF + LOG + INV + price)
 // ══════════════════════════════════════════════
 function buildDOM(pi){
@@ -378,8 +507,8 @@ function buildDOM(pi){
   const p=panels[pi];
   el.innerHTML='';
   const tb=document.createElement('div');tb.className='ptb';tb.id=`tb-${pi}`;
-  const tfsel=document.createElement('select');tfsel.className='tf-sel';
-  TFS.forEach(tf=>{const o=document.createElement('option');o.value=tf;o.textContent=tf;if(tf===p.tf)o.selected=true;tfsel.appendChild(o);});
+  const tfsel=document.createElement('select');tfsel.className='tf-sel';tfsel.id=`tf-sel-${pi}`;
+  sortedTFs().forEach(tf=>{const o=document.createElement('option');o.value=tf;o.textContent=tf;if(tf===p.tf)o.selected=true;tfsel.appendChild(o);});
   tfsel.onchange=()=>changeTF(pi,tfsel.value);
   const logBtn=document.createElement('button');logBtn.className='vm-btn';logBtn.id=`log-${pi}`;logBtn.textContent='LOG';logBtn.title='对数坐标';logBtn.onclick=()=>toggleLog(pi);
   const invBtn=document.createElement('button');invBtn.className='vm-btn';invBtn.id=`inv-${pi}`;invBtn.textContent='↕';invBtn.title='倒垂视图';invBtn.onclick=()=>toggleInvert(pi);
