@@ -55,8 +55,41 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .row-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:10px;font-weight:700;padding:0 6px;height:20px;flex-shrink:0}
 .row-btn:hover{border-color:var(--blue);color:var(--blue)}
 
+/* ── BODY ROW: left column | chart scroll area ── */
+#body-row{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0}
+
+/* left vertical column: chat (top) + minimap (bottom) */
+#left-col{width:220px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative;background:var(--bg2)}
+#left-handle{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:20}
+#left-handle:hover{background:var(--blue)}
+
+/* chat */
+#chat-bar{flex:1;display:flex;flex-direction:column;min-height:0}
+#chat-hd{font-size:10px;font-weight:700;color:var(--text2);padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px}
+#chat-msgs{flex:1;overflow-y:auto;padding:4px 10px;display:flex;flex-direction:column;gap:3px}
+#chat-msgs::-webkit-scrollbar{width:4px}
+#chat-msgs::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+.cm{display:flex;flex-direction:column;font-size:11px;line-height:1.35}
+.cm-top{display:flex;align-items:baseline;gap:6px}
+.cn{color:var(--blue);font-weight:700;flex-shrink:0}
+.ct{color:var(--text2);font-size:9px;flex-shrink:0}
+.cb{color:var(--text);word-break:break-word}
+#chat-input-row{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-top:1px solid var(--border);flex-shrink:0}
+#chat-inp{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:4px 8px;font-size:11px;outline:none}
+#chat-inp:focus{border-color:var(--blue)}
+#chat-send{background:var(--blue);border:none;color:#fff;border-radius:3px;padding:4px 10px;font-size:11px;cursor:pointer}
+#chat-send:hover{background:#1e53e5}
+#chat-status{font-size:9px;color:var(--text2)}
+
+/* minimap navigator */
+#minimap{height:170px;flex-shrink:0;border-top:1px solid var(--border);position:relative;overflow:hidden;background:var(--bg);cursor:pointer}
+#mm-title{position:absolute;top:2px;left:0;right:0;text-align:center;font-size:9px;color:var(--text2);z-index:3;pointer-events:none}
+#mm-track{position:absolute;inset:0}
+.mm-blk{position:absolute;background:var(--bg3);border:1px solid var(--border);border-radius:2px;font-size:9px;font-weight:700;color:var(--text2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#mm-thumb{position:absolute;left:0;right:0;background:rgba(41,98,255,.18);border:1px solid var(--blue);border-radius:2px;z-index:2;pointer-events:none}
+
 /* ── SCROLLABLE GRID AREA ── */
-#scroll-wrap{flex:1;overflow-y:auto;overflow-x:hidden}
+#scroll-wrap{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
 #scroll-wrap::-webkit-scrollbar{width:5px}
 #scroll-wrap::-webkit-scrollbar-track{background:var(--bg)}
 #scroll-wrap::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
@@ -99,24 +132,19 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .tf-chip .tcx{cursor:pointer;opacity:.4;font-size:9px;margin-left:1px}
 .tf-chip .tcx:hover{opacity:1;color:var(--red)}
 
-/* ── CHAT BAR ── */
-#chat-bar{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column;height:160px;min-height:80px;max-height:480px;position:relative}
-#chat-handle{height:5px;cursor:row-resize;background:var(--border);flex-shrink:0}
-#chat-handle:hover{background:var(--blue)}
-#chat-msgs{flex:1;overflow-y:auto;padding:4px 10px;display:flex;flex-direction:column;gap:2px}
-#chat-msgs::-webkit-scrollbar{width:4px}
-#chat-msgs::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
-.cm{display:flex;align-items:baseline;gap:6px;font-size:11px;line-height:1.4}
-.cn{color:var(--blue);font-weight:700;flex-shrink:0}
-.ct{color:var(--text2);font-size:9px;flex-shrink:0}
-.cb{color:var(--text);word-break:break-all}
-#chat-input-row{display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border);flex-shrink:0}
-#chat-nick-lbl{color:var(--text2);font-size:10px;font-weight:700;flex-shrink:0;white-space:nowrap}
-#chat-inp{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:3px 8px;font-size:11px;outline:none}
-#chat-inp:focus{border-color:var(--blue)}
-#chat-send{background:var(--blue);border:none;color:#fff;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0}
-#chat-send:hover{background:#1e53e5}
-#chat-status{font-size:9px;color:var(--text2);flex-shrink:0}
+/* ── PRESET / RESTORE MODAL ── */
+#preset-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center}
+#preset-modal.show{display:flex}
+.pm-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:22px 24px;min-width:340px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px}
+.pm-box h3{font-size:15px;font-weight:700;color:#fff}
+.pm-box .pm-sub{font-size:11px;color:var(--text2);line-height:1.5}
+.pm-sec{font-size:11px;color:var(--text2);font-weight:700;margin-top:4px}
+.pm-btn{text-align:left;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:9px 12px;font-size:12px;cursor:pointer;transition:all .12s}
+.pm-btn:hover{border-color:var(--blue);background:rgba(41,98,255,.12)}
+.pm-btn b{color:#fff;font-size:13px}
+.pm-btn .pm-d{display:block;font-size:10px;color:var(--text2);margin-top:2px}
+.pm-btn.restore{border-color:var(--green)}
+.pm-btn.restore b{color:var(--green)}
 </style>
 </head>
 <body>
@@ -147,6 +175,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div class="isep"></div>
   <button class="row-btn" onclick="addRow()" title="增加一行">+行</button>
   <button class="row-btn" onclick="removeRow()" title="减少一行">-行</button>
+  <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
 </div>
 
 <!-- ── TF MANAGER POPOVER ── -->
@@ -162,20 +191,29 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div id="tf-err" style="color:var(--red);font-size:10px;display:none"></div>
 </div>
 
-<!-- ── SCROLLABLE CHART AREA ── -->
-<div id="scroll-wrap">
-  <div id="grid"></div>
-</div>
+<!-- ── BODY ROW ── -->
+<div id="body-row">
+  <!-- LEFT COLUMN: chat + minimap -->
+  <div id="left-col">
+    <div id="chat-bar">
+      <div id="chat-hd">💬 公共聊天 · <span id="chat-nick-lbl">--</span><span id="chat-status" style="margin-left:auto">○</span></div>
+      <div id="chat-msgs"></div>
+      <div id="chat-input-row">
+        <input id="chat-inp" placeholder="发送消息…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button id="chat-send" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+    <div id="minimap" title="拖动/滚轮浏览全部周期">
+      <div id="mm-title">缩略导航</div>
+      <div id="mm-track"></div>
+      <div id="mm-thumb"></div>
+    </div>
+    <div id="left-handle"></div>
+  </div>
 
-<!-- ── CHAT BAR ── -->
-<div id="chat-bar">
-  <div id="chat-handle"></div>
-  <div id="chat-msgs"></div>
-  <div id="chat-input-row">
-    <span id="chat-nick-lbl">--</span>
-    <input id="chat-inp" placeholder="发送消息…" onkeydown="if(event.key==='Enter')sendChat()">
-    <span id="chat-status">○</span>
-    <button id="chat-send" onclick="sendChat()">发送</button>
+  <!-- RIGHT: scrollable charts -->
+  <div id="scroll-wrap">
+    <div id="grid"></div>
   </div>
 </div>
 
@@ -211,13 +249,30 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <button class="gbtn" id="gpop-btn" onclick="commitPop()">添加</button>
 </div>
 
+<!-- ── PRESET / RESTORE MODAL ── -->
+<div id="preset-modal">
+  <div class="pm-box">
+    <h3 id="pm-title">选择看盘界面</h3>
+    <div class="pm-sub" id="pm-sub">检测到网页已更新版本。你可以恢复上次保存的界面，或加载一款默认配置（含 K 线周期与指标周期）。</div>
+    <div id="pm-restore-wrap"></div>
+    <div class="pm-sec">默认界面</div>
+    <button class="pm-btn" onclick="applyPreset('scalp')"><b>短线高频</b><span class="pm-d">1m·3m·5m·15m·30m·1h ｜ EMA 7/25/99/200 ｜ TEMA</span></button>
+    <button class="pm-btn" onclick="applyPreset('default')"><b>综合默认</b><span class="pm-d">3m·15m·1h·6h ｜ EMA 25/99/200/288/400/600 ｜ TEMA</span></button>
+    <button class="pm-btn" onclick="applyPreset('swing')"><b>中长线</b><span class="pm-d">1h·4h·12h·1d·3d·1w ｜ MA 25/99/200/400 ｜ MA</span></button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════
 const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
 const BINANCE_TFS=['1s','1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
-const DEFAULT_TF_ORDER=['3m','15m','1h','6h','4h','12h','1d','3d','1w','1M','2h','8h'];
+// pool to draw extra panel TFs from (ascending)
+const TF_POOL=['1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
+
+const APP_VERSION='3';            // bump on each release to offer restore/preset choice
+const SETTINGS_KEY='btcll_settings_v1';
 
 function tfToSec(tf){
   const n=parseInt(tf),u=tf.slice(-1);
@@ -226,7 +281,7 @@ function tfToSec(tf){
   return 0;
 }
 
-// Rainbow colors for 6 EMA periods (light→prominent, red→orange→yellow→green→cyan→blue)
+// Rainbow ramp for the EMA periods (light→prominent: red→orange→yellow→green→cyan→blue)
 const EMA_RAMP=[
   {color:'#ef5350',lw:.7, fs:9},
   {color:'#ff9800',lw:1.0,fs:9.5},
@@ -235,14 +290,20 @@ const EMA_RAMP=[
   {color:'#00bcd4',lw:2.3, fs:11},
   {color:'#2962ff',lw:2.8, fs:11.5},
 ];
-const EMA_PERIODS=[25,99,200,288,400,600];
 const PALETTE=['#ab47bc','#e91e63','#8bc34a','#00bcd4','#ff9800','#2962ff'];
+
+// ── interface presets (TF order ascending = left→right, top→bottom) ──
+const PRESETS={
+  scalp:  {name:'短线高频', tfs:['1m','3m','5m','15m','30m','1h'], emas:[7,25,99,200], tema:true, ma:false, vpvr:true},
+  default:{name:'综合默认', tfs:['3m','15m','1h','6h'], emas:[25,99,200,288,400,600], tema:true, ma:false, vpvr:true},
+  swing:  {name:'中长线',   tfs:['1h','4h','12h','1d','3d','1w'], emas:[25,99,200,400], tema:false, ma:true, vpvr:true},
+};
 
 // ══════════════════════════════════════════════
 // GLOBAL STATE
 // ══════════════════════════════════════════════
 let _uid=1; const uid=()=>'i'+(_uid++);
-let _pidx=0; const nxtColor=()=>PALETTE[(_pidx++)%PALETTE.length];
+let _pidx=0;
 let maToggle={tema:true, ma:false};
 let sharedInds=[];
 const POP={indId:null,mode:'add'};
@@ -250,24 +311,96 @@ const panels=[];
 let userTFs=[...BINANCE_TFS];
 
 // ══════════════════════════════════════════════
-// INIT SHARED INDS
+// SETTINGS PERSISTENCE
 // ══════════════════════════════════════════════
-function initSharedInds(){
-  sharedInds=[];
-  EMA_PERIODS.forEach((p,i)=>{
-    sharedInds.push({id:uid(),type:'ma-line',p,color:EMA_RAMP[i].color,lw:EMA_RAMP[i].lw,fs:EMA_RAMP[i].fs,hidden:false});
-  });
-  sharedInds.push({id:uid(),type:'vpvr',rows:100,width:18,color:'#2962ff',fs:10,hidden:false});
+function snapshotSettings(){
+  return {
+    version:APP_VERSION,
+    panelTFs:panels.map(p=>p.tf),
+    userTFs:[...userTFs],
+    maToggle:{...maToggle},
+    inds:sharedInds.map(i=>({...i})),
+  };
 }
+function saveSettings(){
+  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(snapshotSettings()));}catch(_){}
+}
+function loadSavedSettings(){
+  try{return JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(_){return null;}
+}
+
+function buildIndsFromPeriods(periods,vpvr){
+  const inds=[];
+  periods.forEach((p,i)=>{
+    const color=i<EMA_RAMP.length?EMA_RAMP[i].color:PALETTE[i%PALETTE.length];
+    const lw=i<EMA_RAMP.length?EMA_RAMP[i].lw:1.5;
+    const fs=i<EMA_RAMP.length?EMA_RAMP[i].fs:10;
+    inds.push({id:uid(),type:'ma-line',p,color,lw,fs,hidden:false});
+  });
+  if(vpvr)inds.push({id:uid(),type:'vpvr',rows:100,width:18,color:'#2962ff',fs:10,hidden:false});
+  return inds;
+}
+
+function syncMaBtns(){
+  document.querySelector('.ma-btn[data-t="tema"]')?.classList.toggle('on',!!maToggle.tema);
+  document.querySelector('.ma-btn[data-t="ma"]')?.classList.toggle('on',!!maToggle.ma);
+}
+
+// apply a preset (also closes modal + rebuilds + persists)
+function applyPreset(key){
+  const pr=PRESETS[key]; if(!pr)return;
+  userTFs=[...new Set([...BINANCE_TFS,...pr.tfs])];
+  maToggle={tema:pr.tema,ma:pr.ma};
+  sharedInds=buildIndsFromPeriods(pr.emas,pr.vpvr);
+  syncMaBtns();
+  renderSharedChips();
+  closePresetModal();
+  rebuildPanels(pr.tfs);
+  saveSettings();
+}
+
+// restore a saved snapshot
+function applySettings(s){
+  userTFs=(s.userTFs&&s.userTFs.length)?[...s.userTFs]:[...BINANCE_TFS];
+  maToggle=s.maToggle?{tema:!!s.maToggle.tema,ma:!!s.maToggle.ma}:{tema:true,ma:false};
+  sharedInds=(s.inds||[]).map(i=>({...i,id:uid()}));
+  if(!sharedInds.length)sharedInds=buildIndsFromPeriods(PRESETS.default.emas,true);
+  syncMaBtns();
+  renderSharedChips();
+  closePresetModal();
+  rebuildPanels((s.panelTFs&&s.panelTFs.length)?s.panelTFs:PRESETS.default.tfs);
+  saveSettings();
+}
+
+// ══════════════════════════════════════════════
+// PRESET / RESTORE MODAL
+// ══════════════════════════════════════════════
+function openPresetModal(saved){
+  const wrap=document.getElementById('pm-restore-wrap');
+  wrap.innerHTML='';
+  if(saved&&saved.panelTFs&&saved.panelTFs.length){
+    const sec=document.createElement('div');sec.className='pm-sec';sec.textContent='上次保存';
+    const btn=document.createElement('button');
+    btn.className='pm-btn restore';
+    const tfs=saved.panelTFs.join('·');
+    const emas=(saved.inds||[]).filter(i=>i.type==='ma-line').map(i=>i.p).join('/');
+    btn.innerHTML=`<b>↺ 恢复上次设置</b><span class="pm-d">${tfs}${emas?' ｜ '+emas:''}</span>`;
+    btn.onclick=()=>applySettings(saved);
+    wrap.append(sec,btn);
+  }
+  document.getElementById('preset-modal').classList.add('show');
+}
+function closePresetModal(){document.getElementById('preset-modal').classList.remove('show');}
 
 // ══════════════════════════════════════════════
 // MA TOGGLE
 // ══════════════════════════════════════════════
 function toggleMA(t){
   maToggle[t]=!maToggle[t];
-  document.querySelector(`.ma-btn[data-t="${t}"]`)?.classList.toggle('on',maToggle[t]);
+  syncMaBtns();
   redrawAllPanels();
   renderSharedChips();
+  saveSettings();
 }
 
 // ══════════════════════════════════════════════
@@ -277,13 +410,14 @@ function toggleIndVisible(id){
   const ind=sharedInds.find(i=>i.id===id);
   if(!ind)return;
   ind.hidden=!ind.hidden;
-  // apply to all panel series
   panels.forEach(p=>{
     for(const [k,s] of Object.entries(p.seriesMap||{})){
       if(k.startsWith(id)) try{s.applyOptions({visible:!ind.hidden});}catch(_){}
     }
+    schedVPVR(panels.indexOf(p));
   });
   renderSharedChips();
+  saveSettings();
 }
 
 // ══════════════════════════════════════════════
@@ -358,7 +492,7 @@ async function fetchCandles(tf){
 }
 
 // ══════════════════════════════════════════════
-// VPVR — bars offset from right to avoid price axis overlap
+// VPVR — offset from right price axis
 // ══════════════════════════════════════════════
 function drawVPVR(pi){
   const p=panels[pi];
@@ -385,7 +519,6 @@ function drawVPVR(pi){
   const lowRows=new Set(
     vols.map((v,r)=>({v,r})).filter(o=>o.v>0).sort((a,b)=>a.v-b.v).slice(0,HIGHLIGHT_N).map(o=>o.r)
   );
-  // offset from right edge to avoid overlapping price axis
   const axisW=(p.chart.priceScale('right').width&&p.chart.priceScale('right').width())||65;
   const W=canvas.width;
   const barMaxW=(W-axisW)*wpct/100;
@@ -402,13 +535,13 @@ function drawVPVR(pi){
   }
 }
 function schedVPVR(pi){
-  const p=panels[pi];
+  const p=panels[pi];if(!p)return;
   if(p._vraf)cancelAnimationFrame(p._vraf);
   p._vraf=requestAnimationFrame(()=>drawVPVR(pi));
 }
 
 // ══════════════════════════════════════════════
-// SHARED CHIPS (top bar) — with eye icon
+// SHARED CHIPS
 // ══════════════════════════════════════════════
 function chipSortKey(ind){
   if(ind.type==='ma-line')return ind.p;
@@ -442,6 +575,7 @@ function removeSharedInd(id){
   sharedInds=sharedInds.filter(i=>i.id!==id);
   renderSharedChips();
   redrawAllPanels();
+  saveSettings();
 }
 
 // ══════════════════════════════════════════════
@@ -474,18 +608,19 @@ function renderTFChips(){
 function removeTF(tf){
   if(userTFs.length<=1)return;
   userTFs=userTFs.filter(t=>t!==tf);
-  renderTFChips();rebuildTFSelectors();
+  renderTFChips();rebuildTFSelectors();saveSettings();
 }
 function addCustomTF(){
   const inp=document.getElementById('tf-custom-inp');
   const err=document.getElementById('tf-err');
-  const val=inp.value.trim().toLowerCase();
+  const val=inp.value.trim().toLowerCase().replace('mon','M');
   err.style.display='none';
   if(!val){err.textContent='请输入周期，如 2m';err.style.display='';return;}
-  if(!/^\d+[smhdwM]$/.test(val)&&!/^\d+M$/.test(val)){err.textContent='格式不对，支持: 1s 2m 8h 3d 2w 1M';err.style.display='';return;}
-  if(userTFs.includes(val)){err.textContent='该周期已存在';err.style.display='';return;}
-  userTFs.push(val);inp.value='';
-  renderTFChips();rebuildTFSelectors();
+  if(!/^\d+[smhdw]$/.test(val)&&!/^\d+M$/.test(inp.value.trim())){err.textContent='格式不对，支持: 1s 2m 8h 3d 2w 1M';err.style.display='';return;}
+  const tf=/^\d+M$/.test(inp.value.trim())?inp.value.trim():val;
+  if(userTFs.includes(tf)){err.textContent='该周期已存在';err.style.display='';return;}
+  userTFs.push(tf);inp.value='';
+  renderTFChips();rebuildTFSelectors();saveSettings();
 }
 function openTFMgr(anchor){
   closePop();
@@ -505,14 +640,21 @@ document.addEventListener('click',e=>{
 });
 
 // ══════════════════════════════════════════════
-// ROW MANAGEMENT (add/remove 2 panels = 1 row)
+// ROW MANAGEMENT
 // ══════════════════════════════════════════════
+function nextPoolTF(){
+  // pick the smallest pool TF not yet used, keeping ascending feel
+  const used=new Set(panels.map(p=>p.tf));
+  for(const tf of TF_POOL){if(!used.has(tf))return tf;}
+  return '1h';
+}
 function addRow(){
   if(panels.length>=12)return;
   const grid=document.getElementById('grid');
   for(let i=0;i<2&&panels.length<12;i++){
     const pi=panels.length;
-    const tf=DEFAULT_TF_ORDER[pi]||userTFs[pi%userTFs.length]||'1h';
+    const tf=nextPoolTF();
+    if(!userTFs.includes(tf))userTFs.push(tf);
     panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
     const pnlDiv=document.createElement('div');
     pnlDiv.className='pnl';pnlDiv.id=`pnl-${pi}`;
@@ -520,10 +662,10 @@ function addRow(){
     buildDOM(pi);
     loadPanel(pi);
   }
+  refreshMinimap();saveSettings();
 }
 function removeRow(){
   if(panels.length<=2)return;
-  const grid=document.getElementById('grid');
   const toRemove=Math.min(2,panels.length-2);
   for(let i=0;i<toRemove;i++){
     const pi=panels.length-1;
@@ -534,6 +676,29 @@ function removeRow(){
     document.getElementById(`pnl-${pi}`)?.remove();
     panels.pop();
   }
+  refreshMinimap();saveSettings();
+}
+
+// teardown + rebuild all panels to a given tf list
+function rebuildPanels(tfs){
+  panels.forEach(p=>{
+    if(p.ws){try{p.ws.close();}catch(_){}}
+    if(p._vraf)cancelAnimationFrame(p._vraf);
+    if(p.chart){try{p.chart.remove();}catch(_){}}
+  });
+  panels.length=0;
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  tfs.forEach((tf,i)=>{
+    if(!userTFs.includes(tf))userTFs.push(tf);
+    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
+    const pnlDiv=document.createElement('div');
+    pnlDiv.className='pnl';pnlDiv.id=`pnl-${i}`;
+    grid.appendChild(pnlDiv);
+    buildDOM(i);
+  });
+  panels.forEach((_,i)=>loadPanel(i));
+  refreshMinimap();
 }
 
 // ══════════════════════════════════════════════
@@ -562,9 +727,11 @@ function buildDOM(pi){
 async function loadPanel(pi){
   const p=panels[pi];
   const cw=document.getElementById(`cw-${pi}`);
+  if(!cw)return;
   if(p.chart){try{p.chart.remove();}catch(_){}p.chart=null;}
   if(p.ws){try{p.ws.close();}catch(_){}p.ws=null;}
   if(p._vraf){cancelAnimationFrame(p._vraf);p._vraf=null;}
+  p.noMore=false;
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
   try{
     const candles=await fetchCandles(p.tf);p.candles=candles;
@@ -615,12 +782,8 @@ function drawAllInds(pi){
     const vis=!ind.hidden;
     const ln=(c=col,w=lw,style=0)=>p.chart.addLineSeries({color:c,lineWidth:w,lineStyle:style,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,visible:vis});
     if(ind.type==='ma-line'){
-      if(maToggle.tema){
-        const s=ln(col,lw,0);s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id+'_tema']=s;
-      }
-      if(maToggle.ma){
-        const s=ln(col,lw,2);s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id+'_ma']=s;
-      }
+      if(maToggle.tema){const s=ln(col,lw,0);s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id+'_tema']=s;}
+      if(maToggle.ma){const s=ln(col,lw,2);s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id+'_ma']=s;}
     }else if(ind.type==='bb'){
       const b=calcBB(closes,ind.p,ind.m||2);
       const sm=ln(col,lw),su=ln(hexRgba(col,.5),Math.max(.5,lw-.4)),sl=ln(hexRgba(col,.5),Math.max(.5,lw-.4));
@@ -743,13 +906,13 @@ function commitPop(){
       if(ind.type==='vpvr'){ind.rows=rows;ind.width=width;}
     }
   }
-  renderSharedChips();redrawAllPanels();closePop();
+  renderSharedChips();redrawAllPanels();closePop();saveSettings();
 }
 
 // ══════════════════════════════════════════════
 // PANEL INTERACTIONS
 // ══════════════════════════════════════════════
-function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);}
+function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);refreshMinimap();saveSettings();}
 function updatePP(pi){
   const p=panels[pi];const last=p.candles?.[p.candles.length-1];if(!last)return;
   const el=document.getElementById(`pp-${pi}`);
@@ -812,7 +975,7 @@ async function fetchFR(){try{const r=await fetch(`${FAPI}/premiumIndex?symbol=${
 async function fetchOI(){try{const r=await fetch(`${FAPI}/openInterest?symbol=${SYM}`);const d=await r.json();document.getElementById('soi').textContent=fmtV(+d.openInterest);}catch(_){}}
 
 // ══════════════════════════════════════════════
-// RESIZE
+// RESIZE + MINIMAP
 // ══════════════════════════════════════════════
 function resizeAll(){
   panels.forEach((p,pi)=>{
@@ -824,7 +987,86 @@ function resizeAll(){
     if(p.vpvrCanvas){p.vpvrCanvas.width=W;p.vpvrCanvas.height=H;}
     schedVPVR(pi);
   });
+  refreshMinimap();
 }
+
+function refreshMinimap(){
+  const sw=document.getElementById('scroll-wrap');
+  const grid=document.getElementById('grid');
+  const mm=document.getElementById('minimap');
+  const track=document.getElementById('mm-track');
+  if(!sw||!grid||!mm||!track)return;
+  const contentH=grid.scrollHeight||1;
+  const mmH=mm.clientHeight;
+  const scale=mmH/contentH;
+  track.innerHTML='';
+  panels.forEach((p,pi)=>{
+    const el=document.getElementById(`pnl-${pi}`);
+    if(!el)return;
+    const blk=document.createElement('div');
+    blk.className='mm-blk';
+    blk.style.top=(el.offsetTop*scale+1)+'px';
+    blk.style.height=Math.max(8,el.offsetHeight*scale-3)+'px';
+    blk.style.left=(pi%2===0?'3%':'52%');
+    blk.style.width='45%';
+    blk.textContent=p.tf;
+    track.appendChild(blk);
+  });
+  updateMinimapThumb();
+}
+function updateMinimapThumb(){
+  const sw=document.getElementById('scroll-wrap');
+  const grid=document.getElementById('grid');
+  const mm=document.getElementById('minimap');
+  const thumb=document.getElementById('mm-thumb');
+  if(!sw||!grid||!mm||!thumb)return;
+  const contentH=grid.scrollHeight||1;
+  const scale=mm.clientHeight/contentH;
+  thumb.style.top=(sw.scrollTop*scale)+'px';
+  thumb.style.height=Math.max(14,sw.clientHeight*scale)+'px';
+}
+
+// minimap drag / click → scroll the chart area
+(function(){
+  const mm=document.getElementById('minimap');
+  const sw=document.getElementById('scroll-wrap');
+  const grid=document.getElementById('grid');
+  let dragging=false;
+  function scrollToClientY(clientY){
+    const rect=mm.getBoundingClientRect();
+    const contentH=grid.scrollHeight||1;
+    const scale=mm.clientHeight/contentH;
+    let y=clientY-rect.top;
+    let target=y/scale - sw.clientHeight/2;
+    target=Math.max(0,Math.min(contentH-sw.clientHeight,target));
+    sw.scrollTop=target;
+  }
+  mm.addEventListener('mousedown',e=>{dragging=true;scrollToClientY(e.clientY);e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(dragging)scrollToClientY(e.clientY);});
+  document.addEventListener('mouseup',()=>{dragging=false;});
+  mm.addEventListener('wheel',e=>{sw.scrollTop+=e.deltaY;e.preventDefault();},{passive:false});
+  sw.addEventListener('scroll',updateMinimapThumb);
+})();
+
+// page wheel only navigates via minimap/scrollbar — wheel over charts stays zoom-only
+(function(){
+  const sw=document.getElementById('scroll-wrap');
+  sw.addEventListener('wheel',e=>{e.preventDefault();},{passive:false});
+})();
+
+// left column width resize
+(function(){
+  const col=document.getElementById('left-col');
+  const handle=document.getElementById('left-handle');
+  let dragging=false,startX=0,startW=0;
+  handle.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=col.offsetWidth;e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const w=Math.max(150,Math.min(480,startW+(e.clientX-startX)));
+    col.style.width=w+'px';
+  });
+  document.addEventListener('mouseup',()=>{if(dragging){dragging=false;resizeAll();}});
+})();
 
 // ══════════════════════════════════════════════
 // FORMAT
@@ -833,7 +1075,7 @@ function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
 // ══════════════════════════════════════════════
-// CHAT BAR
+// CHAT
 // ══════════════════════════════════════════════
 const MQTT_BROKER='wss://broker.hivemq.com:8000/mqtt';
 const MQTT_TOPIC='btcll-chat-v1';
@@ -845,18 +1087,14 @@ function getNick(){
   if(!nick){
     const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
     const city=tz.split('/').pop().replace(/_/g,'').substring(0,3).toUpperCase();
-    const num=String(Math.floor(1000+Math.random()*9000));
-    nick=city+num;
+    nick=city+String(Math.floor(1000+Math.random()*9000));
     localStorage.setItem('btcll_nick',nick);
   }
   return nick;
 }
-function getChatMsgs(){
-  try{return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]');}catch(_){return[];}
-}
+function getChatMsgs(){try{return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]');}catch(_){return[];}}
 function saveChatMsg(msg){
   const msgs=getChatMsgs();
-  // dedup by ts+nick
   if(msgs.find(m=>m.ts===msg.ts&&m.nick===msg.nick))return false;
   msgs.push(msg);
   if(msgs.length>1000)msgs.splice(0,msgs.length-1000);
@@ -866,13 +1104,12 @@ function saveChatMsg(msg){
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function renderChatMsgs(){
   const msgs=getChatMsgs();
-  const el=document.getElementById('chat-msgs');
-  if(!el)return;
+  const el=document.getElementById('chat-msgs');if(!el)return;
   const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<40;
   el.innerHTML=msgs.map(m=>{
     const d=new Date(m.ts);
     const t=d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="cm"><span class="cn">${escHtml(m.nick)}</span><span class="ct">${t}</span><span class="cb">${escHtml(m.text)}</span></div>`;
+    return`<div class="cm"><div class="cm-top"><span class="cn">${escHtml(m.nick)}</span><span class="ct">${t}</span></div><span class="cb">${escHtml(m.text)}</span></div>`;
   }).join('');
   if(atBottom||msgs.length<=20)el.scrollTop=el.scrollHeight;
 }
@@ -881,78 +1118,48 @@ function sendChat(){
   const text=inp.value.trim();if(!text)return;
   const msg={nick:getNick(),text,ts:Date.now()};
   inp.value='';
-  saveChatMsg(msg);
-  renderChatMsgs();
-  if(mqttClient&&mqttClient.connected){
-    try{mqttClient.publish(MQTT_TOPIC,JSON.stringify(msg));}catch(_){}
-  }
+  saveChatMsg(msg);renderChatMsgs();
+  if(mqttClient&&mqttClient.connected){try{mqttClient.publish(MQTT_TOPIC,JSON.stringify(msg));}catch(_){}}
 }
 function initChat(){
-  const nick=getNick();
-  document.getElementById('chat-nick-lbl').textContent=nick+':';
+  document.getElementById('chat-nick-lbl').textContent=getNick();
   renderChatMsgs();
   try{
-    mqttClient=mqtt.connect(MQTT_BROKER,{
-      clientId:'btcll_'+Math.random().toString(36).slice(2,10),
-      reconnectPeriod:3000,
-      connectTimeout:8000,
-    });
+    mqttClient=mqtt.connect(MQTT_BROKER,{clientId:'btcll_'+Math.random().toString(36).slice(2,10),reconnectPeriod:3000,connectTimeout:8000});
     mqttClient.on('connect',()=>{
       mqttClient.subscribe(MQTT_TOPIC);
-      document.getElementById('chat-status').textContent='●';
-      document.getElementById('chat-status').style.color='var(--green)';
+      const s=document.getElementById('chat-status');s.textContent='●';s.style.color='var(--green)';
     });
-    mqttClient.on('offline',()=>{
-      document.getElementById('chat-status').textContent='○';
-      document.getElementById('chat-status').style.color='var(--text2)';
-    });
-    mqttClient.on('message',(topic,payload)=>{
-      try{
-        const msg=JSON.parse(payload.toString());
-        if(saveChatMsg(msg))renderChatMsgs();
-      }catch(_){}
-    });
+    mqttClient.on('offline',()=>{const s=document.getElementById('chat-status');s.textContent='○';s.style.color='var(--text2)';});
+    mqttClient.on('message',(t,payload)=>{try{const msg=JSON.parse(payload.toString());if(saveChatMsg(msg))renderChatMsgs();}catch(_){}});
   }catch(e){console.warn('MQTT init failed',e);}
 }
-
-// Chat bar resize drag
-(function(){
-  const bar=document.getElementById('chat-bar');
-  const handle=document.getElementById('chat-handle');
-  let dragging=false,startY=0,startH=0;
-  handle.addEventListener('mousedown',e=>{
-    dragging=true;startY=e.clientY;startH=bar.offsetHeight;
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove',e=>{
-    if(!dragging)return;
-    const delta=startY-e.clientY;
-    const newH=Math.max(80,Math.min(480,startH+delta));
-    bar.style.height=newH+'px';
-  });
-  document.addEventListener('mouseup',()=>{dragging=false;});
-})();
 
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
-async function init(){
-  initSharedInds();
-  renderSharedChips();
-  const grid=document.getElementById('grid');
-  for(let i=0;i<4;i++){
-    panels.push({tf:DEFAULT_TF_ORDER[i],candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
-    const pnlDiv=document.createElement('div');
-    pnlDiv.className='pnl';pnlDiv.id=`pnl-${i}`;
-    grid.appendChild(pnlDiv);
-    buildDOM(i);
-  }
-  await Promise.all([0,1,2,3].map(i=>loadPanel(i)));
+function bootCommon(){
   new ResizeObserver(resizeAll).observe(document.getElementById('scroll-wrap'));
   startTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>panels.forEach((_,i)=>schedVPVR(i)),600);
   initChat();
+}
+
+function init(){
+  const saved=loadSavedSettings();
+  if(saved&&saved.version!==APP_VERSION){
+    // new version → let user choose restore or a default preset
+    syncMaBtns();
+    openPresetModal(saved);
+  }else if(saved&&saved.panelTFs&&saved.panelTFs.length){
+    // same version → silently restore
+    applySettings(saved);
+  }else{
+    // first run → default preset
+    applyPreset('default');
+  }
+  bootCommon();
 }
 init();
 </script>
