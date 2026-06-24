@@ -137,7 +137,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 /* ── PRESET / RESTORE MODAL ── */
 #preset-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center}
 #preset-modal.show{display:flex}
-.pm-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:22px 24px;min-width:340px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px}
+.pm-box{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:22px 24px;min-width:340px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px}
 .pm-box h3{font-size:15px;font-weight:700;color:#fff}
 .pm-box .pm-sub{font-size:11px;color:var(--text2);line-height:1.5}
 .pm-sec{font-size:11px;color:var(--text2);font-weight:700;margin-top:4px}
@@ -254,6 +254,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 <!-- ── PRESET / RESTORE MODAL ── -->
 <div id="preset-modal">
   <div class="pm-box">
+    <button onclick="closePresetModal()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px;line-height:1">✕</button>
     <h3 id="pm-title">选择看盘界面</h3>
     <div class="pm-sub" id="pm-sub">检测到网页已更新版本。你可以恢复上次保存的界面，或加载一款默认配置（含 K 线周期与指标周期）。</div>
     <div id="pm-restore-wrap"></div>
