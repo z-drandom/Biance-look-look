@@ -750,12 +750,19 @@ async function loadPanel(pi){
       grid:{vertLines:{color:'#1c2030'},horzLines:{color:'#1c2030'}},
       crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
       rightPriceScale:{borderColor:'#363c4e',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
-      timeScale:{borderColor:'#363c4e',timeVisible:true,secondsVisible:false},
+      timeScale:{borderColor:'#363c4e',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:8,minBarSpacing:2},
       handleScroll:true,handleScale:true,
     });
     p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
     p.candleSeries.setData(candles);
-    p.chart.timeScale().fitContent();
+    // show recent candles big enough to read OHLC shapes, with a right gap
+    // so the latest bar clears the price axis + VPVR
+    {
+      const ts=p.chart.timeScale();
+      const visN=Math.max(40,Math.min(candles.length,Math.round((cw.clientWidth||800)/9)));
+      const last=candles.length-1;
+      ts.setVisibleLogicalRange({from:last-visN,to:last+12});
+    }
     p.chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
       schedVPVR(pi);
       if(range&&range.from<20)loadMoreHistory(pi);
