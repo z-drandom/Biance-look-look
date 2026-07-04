@@ -7,6 +7,12 @@
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <style>
+/* ═══════════════════════════════════════════════════════════
+   全局配色变量（改这里即可换全站主题色）
+   --bg    页面背景     --bg2  工具栏/侧栏背景   --bg3 输入框/按钮背景
+   --border 分割线颜色  --text 主文字  --text2 次要文字（灰）
+   --green 涨   --red 跌   --blue 主题蓝（选中态/按钮）
+   ═══════════════════════════════════════════════════════════ */
 :root{
   --bg:#131722;--bg2:#1e222d;--bg3:#2a2e39;--border:#363c4e;
   --text:#d1d4dc;--text2:#787b86;
@@ -17,7 +23,8 @@
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;display:flex;flex-direction:column}
 
-/* ── HEADER ── */
+/* ── 顶部行情栏（价格/24H高低量/资金费率/未平仓） ──
+   height:46px 改这里可调顶栏高度 */
 #hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;gap:14px;height:46px;flex-shrink:0}
 #logo{font-size:14px;font-weight:700;color:#fff;white-space:nowrap}
 #lp{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
@@ -30,7 +37,8 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 #dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite;margin-left:auto;flex-shrink:0}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* ── GLOBAL INDICATOR BAR ── */
+/* ── 全局指标栏（TEMA/MA开关 + 指标标签 + 各种按钮）
+   height:30px 可调指标栏高度 */
 #ind-bar{
   background:var(--bg2);border-bottom:1px solid var(--border);
   padding:0 10px;height:30px;flex-shrink:0;
@@ -55,15 +63,17 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .row-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:10px;font-weight:700;padding:0 6px;height:20px;flex-shrink:0}
 .row-btn:hover{border-color:var(--blue);color:var(--blue)}
 
-/* ── BODY ROW: left column | chart scroll area ── */
+/* ── 主体行布局：左侧竖栏 | 右侧图表滚动区 ── */
 #body-row{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0}
 
-/* left vertical column: chat (top) + minimap (bottom) */
+/* 左侧竖栏（上半：聊天，下半：缩略导航）
+   width:220px = 左栏默认宽度；右缘可拖动，范围见 JS「左栏宽度拖动」处(150~480) */
 #left-col{width:220px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative;background:var(--bg2)}
 #left-handle{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:20}
 #left-handle:hover{background:var(--blue)}
 
-/* chat */
+/* 聊天区：flex:1 与下方 #minimap 的 flex:1 各占左栏一半
+   想让聊天占更多，把这里改成 flex:2（即 2:1） */
 #chat-bar{flex:1;display:flex;flex-direction:column;min-height:0}
 #chat-hd{font-size:10px;font-weight:700;color:var(--text2);padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px}
 #chat-msgs{flex:1;overflow-y:auto;padding:4px 10px;display:flex;flex-direction:column;gap:3px}
@@ -81,19 +91,23 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 #chat-send:hover{background:#1e53e5}
 #chat-status{font-size:9px;color:var(--text2)}
 
-/* minimap navigator */
+/* 缩略导航（滚轮区）：flex:1 占左栏下半部分
+   在这里拖动/点击/滚轮 = 控制右侧整页上下滚动 */
 #minimap{flex:1;min-height:0;border-top:1px solid var(--border);position:relative;overflow:hidden;background:var(--bg);cursor:pointer}
 #mm-title{position:absolute;top:2px;left:0;right:0;text-align:center;font-size:9px;color:var(--text2);z-index:3;pointer-events:none}
 #mm-track{position:absolute;inset:0}
 .mm-blk{position:absolute;background:var(--bg3);border:1px solid var(--border);border-radius:2px;font-size:9px;font-weight:700;color:var(--text2);display:flex;align-items:center;justify-content:center;overflow:hidden}
 #mm-thumb{position:absolute;left:0;right:0;background:rgba(41,98,255,.18);border:1px solid var(--blue);border-radius:2px;z-index:2;pointer-events:none}
 
-/* ── SCROLLABLE GRID AREA ── */
+/* ── 图表滚动区（右侧主区域） ──
+   --row-h = 每行视窗高度，由 JS 动态计算（默认=可视区一半，即2行铺满）
+   拖动行分界线时也是改这个变量，所有视窗统一联动 */
 :root{--row-h:420px}
 #scroll-wrap{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
 #scroll-wrap::-webkit-scrollbar{width:5px}
 #scroll-wrap::-webkit-scrollbar-track{background:var(--bg)}
 #scroll-wrap::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+/* grid-template-columns:1fr 1fr = 每行2列；想改成3列就写 1fr 1fr 1fr */
 #grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:var(--row-h);gap:1px;background:var(--border)}
 .pnl{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;height:var(--row-h)}
 #grid.row-resizing{cursor:row-resize;user-select:none}
@@ -266,17 +280,42 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 </div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   ★ 常用可调参数速查表（想改哪个直接搜关键字跳过去）★
+
+   【K线默认缩放】       搜 barSpacing:2      → 数字越大K线越宽（默认2=最小）
+                        搜 minBarSpacing:1   → 滚轮能缩到的最小宽度
+                        搜 rightOffset:12    → 最新K线右侧留白的根数
+                        搜 visN=             → 首屏显示多少根K线的算法
+   【视窗行高】          搜 defaultRowH       → 默认=可视区一半（2行铺满）
+                        搜 Math.min(1200     → 拖动行高的上限/下限(160)
+   【最大视窗数】        搜 panels.length>=12 → 最多12个（6行×2列）
+   【VPVR】             搜 HIGHLIGHT_N       → 高亮最短的几根（默认3）
+                        搜 rgba(239,83,80    → 高亮色 / rgba(41,98,255 → 普通色
+                        搜 axisW             → 距右侧价格轴的间距（自动取轴宽，兜底65px）
+   【指标默认样式】      搜 EMA_RAMP          → 6条均线的颜色/粗细/标签字号
+   【界面预设】          搜 PRESETS           → 三款预设的周期和均线参数
+   【版本号】            搜 APP_VERSION       → 发新版时+1，用户刷新会弹出界面选择
+   【聊天服务器】        搜 MQTT_BROKERS      → 公共broker列表，可加自建服务器
+   【聊天保存条数】      搜 msgs.length>1000  → 本地最多保存1000条
+   ═══════════════════════════════════════════════════════════════ */
+
 // ══════════════════════════════════════════════
-// CONSTANTS
+// 常量：交易对与接口地址
 // ══════════════════════════════════════════════
+// SYM=交易对（改成 ETHUSDT 即可看以太坊，注意 WebSocket 处也要同步小写符号）
 const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
+// 币安官方支持的全部K线周期（内置列表，用户可在⏱+菜单里增删）
 const BINANCE_TFS=['1s','1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
-// pool to draw extra panel TFs from (ascending)
+// 点「+行」新增视窗时，从这个池子里按从小到大挑还没用过的周期
 const TF_POOL=['1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
 
-const APP_VERSION='3';            // bump on each release to offer restore/preset choice
+// 版本号：每次发布新版把这个数字+1，老用户刷新时会弹出「恢复上次设置/选默认界面」
+const APP_VERSION='3';
+// localStorage 存储键名（改了等于让所有用户的旧设置失效）
 const SETTINGS_KEY='btcll_settings_v1';
 
+// 周期字符串→秒数，用于把周期从小到大排序（1M按30天算）
 function tfToSec(tf){
   const n=parseInt(tf),u=tf.slice(-1);
   if(u==='s')return n;if(u==='m')return n*60;if(u==='h')return n*3600;
@@ -284,18 +323,22 @@ function tfToSec(tf){
   return 0;
 }
 
-// Rainbow ramp for the EMA periods (light→prominent: red→orange→yellow→green→cyan→blue)
+// ── 默认6条均线的「彩虹样式表」（第1条→第6条：红橙黄绿青蓝）──
+// color=线的颜色  lw=线粗(px)  fs=顶部小标签字号(px)
+// 周期越长的线越粗、标签越大；想换颜色/粗细直接改这里
 const EMA_RAMP=[
-  {color:'#ef5350',lw:.7, fs:9},
-  {color:'#ff9800',lw:1.0,fs:9.5},
-  {color:'#f9a825',lw:1.45,fs:10},
-  {color:'#4caf50',lw:1.85,fs:10.5},
-  {color:'#00bcd4',lw:2.3, fs:11},
-  {color:'#2962ff',lw:2.8, fs:11.5},
+  {color:'#ef5350',lw:.7, fs:9},    // 第1条（周期最短）红 最细
+  {color:'#ff9800',lw:1.0,fs:9.5},  // 橙
+  {color:'#f9a825',lw:1.45,fs:10},  // 黄
+  {color:'#4caf50',lw:1.85,fs:10.5},// 绿
+  {color:'#00bcd4',lw:2.3, fs:11},  // 青
+  {color:'#2962ff',lw:2.8, fs:11.5},// 第6条（周期最长）蓝 最粗
 ];
+// 手动新增指标时依次取用的备用色板
 const PALETTE=['#ab47bc','#e91e63','#8bc34a','#00bcd4','#ff9800','#2962ff'];
 
-// ── interface presets (TF order ascending = left→right, top→bottom) ──
+// ── 三款界面预设（tfs 按从小到大排 = 页面上从左到右、从上到下）──
+// tfs=各视窗周期  emas=均线周期列表  tema/ma=默认开哪种均线  vpvr=是否带VPVR
 const PRESETS={
   scalp:  {name:'短线高频', tfs:['1m','3m','5m','15m','30m','1h'], emas:[7,25,99,200], tema:true, ma:false, vpvr:true},
   default:{name:'综合默认', tfs:['3m','15m','1h','6h'], emas:[25,99,200,288,400,600], tema:true, ma:false, vpvr:true},
@@ -303,18 +346,19 @@ const PRESETS={
 };
 
 // ══════════════════════════════════════════════
-// GLOBAL STATE
+// 全局状态（运行时数据，一般不用改）
 // ══════════════════════════════════════════════
-let _uid=1; const uid=()=>'i'+(_uid++);
-let _pidx=0;
-let maToggle={tema:true, ma:false};
-let sharedInds=[];
-const POP={indId:null,mode:'add'};
-const panels=[];
-let userTFs=[...BINANCE_TFS];
+let _uid=1; const uid=()=>'i'+(_uid++);   // 指标唯一ID生成器
+let _pidx=0;                               // 备用色板取色游标
+let maToggle={tema:true, ma:false};        // 顶部 TEMA/MA 开关状态（可同时开）
+let sharedInds=[];                         // 全部指标的唯一数据源（所有视窗共用）
+const POP={indId:null,mode:'add'};         // 指标弹窗当前编辑状态
+const panels=[];                           // 每个视窗的图表对象/数据/WebSocket等
+let userTFs=[...BINANCE_TFS];              // 用户当前可选的周期列表（可增删）
 
 // ══════════════════════════════════════════════
-// SETTINGS PERSISTENCE
+// 设置持久化：把当前界面完整存入 localStorage
+// 存的内容：各视窗周期、周期列表、TEMA/MA开关、全部指标、行高
 // ══════════════════════════════════════════════
 function snapshotSettings(){
   return {
@@ -333,6 +377,7 @@ function loadSavedSettings(){
   try{return JSON.parse(localStorage.getItem(SETTINGS_KEY));}catch(_){return null;}
 }
 
+// 根据均线周期列表生成指标数组（前6条套用EMA_RAMP彩虹样式，超出的用备用色板）
 function buildIndsFromPeriods(periods,vpvr){
   const inds=[];
   periods.forEach((p,i)=>{
@@ -350,7 +395,7 @@ function syncMaBtns(){
   document.querySelector('.ma-btn[data-t="ma"]')?.classList.toggle('on',!!maToggle.ma);
 }
 
-// apply a preset (also closes modal + rebuilds + persists)
+// 应用一款预设界面（重建所有视窗+恢复默认行高+保存）
 function applyPreset(key){
   const pr=PRESETS[key]; if(!pr)return;
   userTFs=[...new Set([...BINANCE_TFS,...pr.tfs])];
@@ -364,7 +409,7 @@ function applyPreset(key){
   saveSettings();
 }
 
-// restore a saved snapshot
+// 恢复一份已保存的界面快照（「恢复上次设置」按钮走这里）
 function applySettings(s){
   userTFs=(s.userTFs&&s.userTFs.length)?[...s.userTFs]:[...BINANCE_TFS];
   maToggle=s.maToggle?{tema:!!s.maToggle.tema,ma:!!s.maToggle.ma}:{tema:true,ma:false};
@@ -379,7 +424,7 @@ function applySettings(s){
 }
 
 // ══════════════════════════════════════════════
-// PRESET / RESTORE MODAL
+// 「选择看盘界面」弹窗（版本更新时自动弹出，也可点顶栏「界面」按钮）
 // ══════════════════════════════════════════════
 function openPresetModal(saved){
   const wrap=document.getElementById('pm-restore-wrap');
@@ -399,7 +444,7 @@ function openPresetModal(saved){
 function closePresetModal(){document.getElementById('preset-modal').classList.remove('show');}
 
 // ══════════════════════════════════════════════
-// MA TOGGLE
+// TEMA/MA 开关：两者独立，可同时开（TEMA实线，MA虚线）
 // ══════════════════════════════════════════════
 function toggleMA(t){
   maToggle[t]=!maToggle[t];
@@ -410,7 +455,8 @@ function toggleMA(t){
 }
 
 // ══════════════════════════════════════════════
-// INDICATOR VISIBILITY TOGGLE (eye icon mouseenter)
+// 指标显隐切换：鼠标扫过标签上的小圆点(●)即触发
+// 快速横扫多个标签 = 批量开/关
 // ══════════════════════════════════════════════
 function toggleIndVisible(id){
   const ind=sharedInds.find(i=>i.id===id);
@@ -427,7 +473,10 @@ function toggleIndVisible(id){
 }
 
 // ══════════════════════════════════════════════
-// MATH
+// 指标计算公式
+// EMA=指数移动平均  MA=简单移动平均
+// TEMA=三重指数(3*EMA1-3*EMA2+EMA3，比EMA更贴近价格)
+// BB=布林带  VWAP=按日重置的成交量加权均价
 // ══════════════════════════════════════════════
 function calcEMA(arr,n){
   const k=2/(n+1),out=new Array(arr.length).fill(null);
@@ -485,7 +534,8 @@ function indLabel(ind){
 }
 
 // ══════════════════════════════════════════════
-// FETCH
+// K线数据拉取：连发两次请求共2000根（每次上限1000根）
+// 想改首屏历史长度就增减第二次请求，往左拖会自动继续加载更早的
 // ══════════════════════════════════════════════
 const pk=k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]});
 async function fetchCandles(tf){
@@ -498,7 +548,9 @@ async function fetchCandles(tf){
 }
 
 // ══════════════════════════════════════════════
-// VPVR — offset from right price axis
+// VPVR 成交量分布（Canvas叠加层，画在K线之上）
+// 统计当前可视K线在各价格档位的成交量，画成横条
+// 蓝色=普通档位，红色=成交量最小的几档（低量区，易快速穿越）
 // ══════════════════════════════════════════════
 function drawVPVR(pi){
   const p=panels[pi];
@@ -521,13 +573,15 @@ function drawVPVR(pi){
     const cnt=r1-r0+1;for(let r=r0;r<=r1;r++)vols[r]+=c.volume/cnt;
   }
   const maxV=Math.max(...vols);
-  const HIGHLIGHT_N=3;
+  const HIGHLIGHT_N=3;   // ★高亮成交量最小的几档，想多标几根改这个数字
   const lowRows=new Set(
     vols.map((v,r)=>({v,r})).filter(o=>o.v>0).sort((a,b)=>a.v-b.v).slice(0,HIGHLIGHT_N).map(o=>o.r)
   );
+  // axisW=右侧价格轴宽度：VPVR条从轴的左边开始画，避免压住价格数字
+  // 取不到轴宽时兜底65px；想让条带离轴更远，在65后面再+个偏移
   const axisW=(p.chart.priceScale('right').width&&p.chart.priceScale('right').width())||65;
   const W=canvas.width;
-  const barMaxW=(W-axisW)*wpct/100;
+  const barMaxW=(W-axisW)*wpct/100;  // 最长条的像素宽 = 可用宽度 × 宽度%设置
   const rightEdge=W-axisW;
   for(let r=0;r<rows;r++){
     if(vols[r]===0)continue;
@@ -536,10 +590,12 @@ function drawVPVR(pi){
     if(yBot==null||yTop==null)continue;
     const y=Math.min(yBot,yTop),bH=Math.max(1,Math.abs(yBot-yTop)-1);
     const bW=vols[r]/maxV*barMaxW;
+    // ★VPVR颜色：红=低量高亮(.6透明度)，蓝=普通(.2透明度)
     ctx.fillStyle=lowRows.has(r)?'rgba(239,83,80,.6)':'rgba(41,98,255,.2)';
     ctx.fillRect(rightEdge-bW,y,bW,bH);
   }
 }
+// 用 requestAnimationFrame 合并高频重绘请求（滚动/缩放时不卡）
 function schedVPVR(pi){
   const p=panels[pi];if(!p)return;
   if(p._vraf)cancelAnimationFrame(p._vraf);
@@ -547,7 +603,10 @@ function schedVPVR(pi){
 }
 
 // ══════════════════════════════════════════════
-// SHARED CHIPS
+// 顶部指标标签（chips）渲染
+// 标签结构：[周期数字|●小圆点|✕]
+//   点数字=编辑  扫过●=显隐切换  点✕=删除
+// 排序：均线按周期从小到大，BB/VWAP其后，VPVR永远最后
 // ══════════════════════════════════════════════
 function chipSortKey(ind){
   if(ind.type==='ma-line')return ind.p;
@@ -585,7 +644,8 @@ function removeSharedInd(id){
 }
 
 // ══════════════════════════════════════════════
-// TF MANAGER
+// 时间周期管理（顶栏⏱+按钮弹出）
+// 支持自定义新增（格式：数字+s/m/h/d/w/M），自动按时长排序
 // ══════════════════════════════════════════════
 function sortedTFs(){return[...userTFs].sort((a,b)=>tfToSec(a)-tfToSec(b));}
 function rebuildTFSelectors(){
@@ -646,16 +706,16 @@ document.addEventListener('click',e=>{
 });
 
 // ══════════════════════════════════════════════
-// ROW MANAGEMENT
+// 行管理：+行/-行 按钮，每次增减2个视窗（1行）
 // ══════════════════════════════════════════════
+// 新视窗自动选一个还没用过的最小周期（保持从小到大的排列感）
 function nextPoolTF(){
-  // pick the smallest pool TF not yet used, keeping ascending feel
   const used=new Set(panels.map(p=>p.tf));
   for(const tf of TF_POOL){if(!used.has(tf))return tf;}
   return '1h';
 }
 function addRow(){
-  if(panels.length>=12)return;
+  if(panels.length>=12)return;  // ★最大视窗数：12个=6行，想加就改这里(两处)
   const grid=document.getElementById('grid');
   for(let i=0;i<2&&panels.length<12;i++){
     const pi=panels.length;
@@ -671,7 +731,7 @@ function addRow(){
   refreshMinimap();saveSettings();
 }
 function removeRow(){
-  if(panels.length<=2)return;
+  if(panels.length<=2)return;  // 最少保留1行（2个视窗）
   const toRemove=Math.min(2,panels.length-2);
   for(let i=0;i<toRemove;i++){
     const pi=panels.length-1;
@@ -685,7 +745,7 @@ function removeRow(){
   refreshMinimap();saveSettings();
 }
 
-// teardown + rebuild all panels to a given tf list
+// 按给定周期列表推倒重建全部视窗（切换预设/恢复设置时用）
 function rebuildPanels(tfs){
   panels.forEach(p=>{
     if(p.ws){try{p.ws.close();}catch(_){}}
@@ -708,7 +768,7 @@ function rebuildPanels(tfs){
 }
 
 // ══════════════════════════════════════════════
-// BUILD PANEL DOM
+// 构建单个视窗的DOM：工具条(周期选择/LOG/↕/价格) + 图表容器
 // ══════════════════════════════════════════════
 function buildDOM(pi){
   const el=document.getElementById(`pnl-${pi}`);
@@ -728,7 +788,7 @@ function buildDOM(pi){
 }
 
 // ══════════════════════════════════════════════
-// LOAD PANEL
+// 加载单个视窗：拉数据→建图→设置默认视野→订阅实时推送
 // ══════════════════════════════════════════════
 async function loadPanel(pi){
   const p=panels[pi];
@@ -750,22 +810,27 @@ async function loadPanel(pi){
       grid:{vertLines:{color:'#1c2030'},horzLines:{color:'#1c2030'}},
       crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
       rightPriceScale:{borderColor:'#363c4e',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
+      // ★K线缩放核心参数：
+      //   rightOffset:12   最新K线右侧留12根的空隙（避开价格轴和VPVR）
+      //   barSpacing:2     默认每根K线占2px（=缩到最小）；改大=默认更宽
+      //   minBarSpacing:1  滚轮能缩到的极限
       timeScale:{borderColor:'#363c4e',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1},
       handleScroll:true,handleScale:true,
     });
     p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
     p.candleSeries.setData(candles);
-    // show recent candles big enough to read OHLC shapes, with a right gap
-    // so the latest bar clears the price axis + VPVR
+    // ★首屏默认视野：显示最近 visN 根K线
+    //   除数2 对应 barSpacing:2（宽度/2 ≈ 一屏塞满最小K线）
+    //   想默认更大：除数改大（如 /5）同时把上面 barSpacing 改成对应值
     {
       const ts=p.chart.timeScale();
-      // default = zoomed all the way out (smallest candles)
       const visN=Math.min(candles.length,Math.round((cw.clientWidth||800)/2));
       const last=candles.length-1;
-      ts.setVisibleLogicalRange({from:last-visN,to:last+12});
+      ts.setVisibleLogicalRange({from:last-visN,to:last+12}); // +12=右侧留白根数
     }
     p.chart.timeScale().subscribeVisibleLogicalRangeChange(range=>{
       schedVPVR(pi);
+      // 拖到距最左20根以内时自动加载更早历史（无限回看）
       if(range&&range.from<20)loadMoreHistory(pi);
     });
     p.seriesMap={};
@@ -779,7 +844,8 @@ async function loadPanel(pi){
 }
 
 // ══════════════════════════════════════════════
-// DRAW ALL INDICATORS
+// 在指定视窗上绘制全部指标线
+// TEMA=实线(lineStyle:0)  MA=虚线(lineStyle:2)，同色区分
 // ══════════════════════════════════════════════
 function toLD(arr,times){return arr.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean);}
 
@@ -813,7 +879,8 @@ function drawAllInds(pi){
 function redrawAllPanels(){panels.forEach((_,i)=>drawAllInds(i));}
 
 // ══════════════════════════════════════════════
-// INFINITE HISTORY
+// 无限历史加载：往左拖到头时自动追加1000根更早的K线
+// 加载后按新增数量平移可视范围，画面不跳动
 // ══════════════════════════════════════════════
 async function loadMoreHistory(pi){
   const p=panels[pi];
@@ -838,7 +905,7 @@ async function loadMoreHistory(pi){
 }
 
 // ══════════════════════════════════════════════
-// LOG / INVERT
+// 视图模式：LOG=对数坐标  ↕=倒垂（上下翻转价格轴）
 // ══════════════════════════════════════════════
 function toggleLog(pi){const p=panels[pi];if(!p.chart)return;p.logMode=!p.logMode;p.chart.priceScale('right').applyOptions({mode:p.logMode?1:0});syncViewBtns(pi);}
 function toggleInvert(pi){const p=panels[pi];if(!p.chart)return;p.invMode=!p.invMode;p.chart.priceScale('right').applyOptions({invertScale:p.invMode});schedVPVR(pi);syncViewBtns(pi);}
@@ -849,7 +916,7 @@ function syncViewBtns(pi){
 }
 
 // ══════════════════════════════════════════════
-// POPOVER
+// 指标添加/编辑弹窗（顶栏+按钮 或 点击指标标签数字）
 // ══════════════════════════════════════════════
 function onGTypeChange(){
   const t=document.getElementById('g-type').value;
@@ -924,7 +991,7 @@ function commitPop(){
 }
 
 // ══════════════════════════════════════════════
-// PANEL INTERACTIONS
+// 视窗交互：切换周期 / 工具条价格显示 / 十字线OHLC显示
 // ══════════════════════════════════════════════
 function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);refreshMinimap();saveSettings();}
 function updatePP(pi){
@@ -940,7 +1007,9 @@ function onCross(pi,param){
 }
 
 // ══════════════════════════════════════════════
-// WEBSOCKET
+// 币安 WebSocket 实时推送
+// subKline=每个视窗的K线实时更新  startTicker=顶栏价格
+// 断线自动重连，间隔指数退避(1s→2s→…→最长16s)
 // ══════════════════════════════════════════════
 function subKline(pi){
   const p=panels[pi];let retry=1000;
@@ -989,8 +1058,9 @@ async function fetchFR(){try{const r=await fetch(`${FAPI}/premiumIndex?symbol=${
 async function fetchOI(){try{const r=await fetch(`${FAPI}/openInterest?symbol=${SYM}`);const d=await r.json();document.getElementById('soi').textContent=fmtV(+d.openInterest);}catch(_){}}
 
 // ══════════════════════════════════════════════
-// RESIZE + MINIMAP
+// 尺寸自适应 + 缩略导航（左下角滚轮区）
 // ══════════════════════════════════════════════
+// 窗口/行高/左栏宽度变化时，重设所有图表和VPVR画布的尺寸
 function resizeAll(){
   panels.forEach((p,pi)=>{
     if(!p.chart)return;
@@ -1004,6 +1074,7 @@ function resizeAll(){
   refreshMinimap();
 }
 
+// 重画缩略图：每个视窗一个小方块（按真实位置/高度等比缩小）
 function refreshMinimap(){
   const sw=document.getElementById('scroll-wrap');
   const grid=document.getElementById('grid');
@@ -1028,6 +1099,7 @@ function refreshMinimap(){
   });
   updateMinimapThumb();
 }
+// 更新缩略图上的蓝色视口框位置
 function updateMinimapThumb(){
   const sw=document.getElementById('scroll-wrap');
   const grid=document.getElementById('grid');
@@ -1040,7 +1112,7 @@ function updateMinimapThumb(){
   thumb.style.height=Math.max(14,sw.clientHeight*scale)+'px';
 }
 
-// minimap drag / click → scroll the chart area
+// 缩略图交互：点击/拖动/滚轮 → 控制右侧整页上下滚动
 (function(){
   const mm=document.getElementById('minimap');
   const sw=document.getElementById('scroll-wrap');
@@ -1062,14 +1134,16 @@ function updateMinimapThumb(){
   sw.addEventListener('scroll',updateMinimapThumb);
 })();
 
-// page wheel only navigates via minimap/scrollbar — wheel over charts stays zoom-only
+// 禁用图表区的页面级滚轮：滚轮在K线内只做缩放
+// 页面上下滚动统一走左下角缩略导航或右侧滚动条
 (function(){
   const sw=document.getElementById('scroll-wrap');
   sw.addEventListener('wheel',e=>{e.preventDefault();},{passive:false});
 })();
 
-// ── uniform row-height management ──
-// default: 2 rows (4 panels) exactly fill the visible chart area
+// ── 行高统一管理 ──
+// 默认行高 = 可视图表区高度的一半 → 页面顶部正好2行×2列铺满
+// rowHManual=true 表示用户手动拖过（此后窗口变化不再自动重算）
 let rowH=420, rowHManual=false;
 function applyRowH(h){
   rowH=Math.round(h);
@@ -1079,11 +1153,12 @@ function applyRowH(h){
 function defaultRowH(){
   const sw=document.getElementById('scroll-wrap');
   const h=sw?sw.clientHeight:840;
-  return Math.max(160,Math.floor((h-1)/2)); // 2 rows fill viewport (gap 1px)
+  return Math.max(160,Math.floor((h-1)/2)); // ÷2=两行铺满；想默认3行铺满就÷3
 }
 function setDefaultRowH(){applyRowH(defaultRowH());}
 
-// drag the horizontal divider between rows to resize ALL panels uniformly
+// 拖动行与行的分界线 → 统一调整所有视窗高度
+// GAP=行间隙px  THRESH=分界线判定范围px（离分界线±6px内显示拖动光标）
 (function(){
   const grid=document.getElementById('grid');
   const GAP=1, THRESH=6;
@@ -1111,6 +1186,7 @@ function setDefaultRowH(){applyRowH(defaultRowH());}
     if(!dragging)return;
     const top=grid.getBoundingClientRect().top;
     const y=e.clientY-top;
+    // ★拖动行高的范围限制：最小160px / 最大1200px
     const h=Math.max(160,Math.min(1200, y/boundaryK - GAP));
     rowHManual=true;
     if(raf)cancelAnimationFrame(raf);
@@ -1123,9 +1199,10 @@ function setDefaultRowH(){applyRowH(defaultRowH());}
   });
 })();
 
+// 浏览器窗口大小变化时，若用户没手动拖过行高则重算默认值
 window.addEventListener('resize',()=>{if(!rowHManual)setDefaultRowH();});
 
-// left column width resize
+// 左栏宽度拖动（左栏右缘的竖条）
 (function(){
   const col=document.getElementById('left-col');
   const handle=document.getElementById('left-handle');
@@ -1133,6 +1210,7 @@ window.addEventListener('resize',()=>{if(!rowHManual)setDefaultRowH();});
   handle.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=col.offsetWidth;e.preventDefault();});
   document.addEventListener('mousemove',e=>{
     if(!dragging)return;
+    // ★左栏宽度范围：最窄150px / 最宽480px
     const w=Math.max(150,Math.min(480,startW+(e.clientX-startX)));
     col.style.width=w+'px';
   });
@@ -1140,25 +1218,28 @@ window.addEventListener('resize',()=>{if(!rowHManual)setDefaultRowH();});
 })();
 
 // ══════════════════════════════════════════════
-// FORMAT
+// 数字格式化：fmt=价格(≥1万去小数)  fmtV=成交量(K/M/B缩写)
 // ══════════════════════════════════════════════
 function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):v.toFixed(2);}
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
 // ══════════════════════════════════════════════
-// CHAT
+// 公共聊天（跨用户实时消息）
+// 原理：所有打开本页的用户订阅同一个公共MQTT主题，互相收发
+// 消息本地存 localStorage（刷新不丢，最多1000条）
 // ══════════════════════════════════════════════
-// Primary: EMQX public broker (reliable TLS websocket)
-// Fallback: HiveMQ
+// broker列表：第1个连不上自动切下一个，循环轮换
+// 想更稳可自建 EMQX/Mosquitto 服务器，把 wss 地址加到最前面
 const MQTT_BROKERS=[
-  'wss://broker.emqx.io:8084/mqtt',
-  'wss://broker.hivemq.com:8000/mqtt',
+  'wss://broker.emqx.io:8084/mqtt',   // 主：EMQX 公共服务器
+  'wss://broker.hivemq.com:8000/mqtt',// 备：HiveMQ
 ];
-const MQTT_TOPIC='btcll-chat-v1';
-const CHAT_KEY='btcll_chat_msgs_v1';
+const MQTT_TOPIC='btcll-chat-v1';     // 公共频道名（改了=开新房间，与旧用户隔离）
+const CHAT_KEY='btcll_chat_msgs_v1';  // 本地消息存储键名
 let mqttClient=null;
 let mqttBrokerIdx=0;
 
+// 昵称 = 时区城市前3个字母 + 4位随机数（如 SHA1234），首次生成后固定
 function getNick(){
   let nick=localStorage.getItem('btcll_nick');
   if(!nick){
@@ -1170,11 +1251,12 @@ function getNick(){
   return nick;
 }
 function getChatMsgs(){try{return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]');}catch(_){return[];}}
+// 存一条消息（按 时间戳+昵称 去重；返回false=重复没存）
 function saveChatMsg(msg){
   const msgs=getChatMsgs();
   if(msgs.find(m=>m.ts===msg.ts&&m.nick===msg.nick))return false;
   msgs.push(msg);
-  if(msgs.length>1000)msgs.splice(0,msgs.length-1000);
+  if(msgs.length>1000)msgs.splice(0,msgs.length-1000); // ★本地最多保存1000条
   localStorage.setItem(CHAT_KEY,JSON.stringify(msgs));
   return true;
 }
@@ -1199,33 +1281,33 @@ function setChatStatus(connected,label){
   s.title=label||'';
 }
 
+// 发送：只 publish 到 broker，不直接写本地
+// broker 会把消息回传给包括自己在内的所有订阅者，收到时统一保存+渲染
+// （发送方和接收方走同一条路径，保证大家看到的内容一致）
 function sendChat(){
   const inp=document.getElementById('chat-inp');
   const text=inp.value.trim();if(!text)return;
   if(!mqttClient||!mqttClient.connected){
-    // show brief error in status
     setChatStatus(false,'未连接，消息未发出');
     return;
   }
   const msg={nick:getNick(),text,ts:Date.now()};
   inp.value='';
-  // Publish only — the broker echoes it back to us via the subscription,
-  // which is when we save+render. This ensures sender and recipients
-  // both go through the same single code path.
   try{mqttClient.publish(MQTT_TOPIC,JSON.stringify(msg),{qos:1});}catch(e){
-    // fallback: save locally if publish fails
+    // 兜底：publish 抛异常时至少存到本地自己能看到
     saveChatMsg(msg);renderChatMsgs();
   }
 }
 
+// 连接指定 broker；断开/失败时自动轮换到列表里的下一个
 function connectMQTT(brokerUrl){
   if(mqttClient){try{mqttClient.end(true);}catch(_){}}
   setChatStatus(false,'连接中…');
   const client=mqtt.connect(brokerUrl,{
     clientId:'btcll_'+Math.random().toString(36).slice(2,10),
-    reconnectPeriod:0,     // we handle reconnect manually to rotate brokers
-    connectTimeout:10000,
-    keepalive:30,
+    reconnectPeriod:0,     // 关掉库自带重连，由下面 tryNext 手动轮换broker
+    connectTimeout:10000,  // 连接超时(ms)
+    keepalive:30,          // 心跳间隔(s)
     clean:true,
   });
   mqttClient=client;
@@ -1234,7 +1316,7 @@ function connectMQTT(brokerUrl){
   client.on('connect',()=>{
     connected=true;
     client.subscribe(MQTT_TOPIC,{qos:1});
-    setChatStatus(true,brokerUrl);
+    setChatStatus(true,brokerUrl); // 状态点悬停可看到当前用的哪个服务器
   });
 
   client.on('message',(_t,payload)=>{
@@ -1244,9 +1326,9 @@ function connectMQTT(brokerUrl){
     }catch(_){}
   });
 
-  // rotate broker on failure
+  // 失败切换下一个 broker（2~3秒后重试）
   const tryNext=()=>{
-    if(client!==mqttClient)return; // superseded
+    if(client!==mqttClient)return; // 已被新连接替代则忽略
     mqttBrokerIdx=(mqttBrokerIdx+1)%MQTT_BROKERS.length;
     setChatStatus(false,'切换服务器…');
     setTimeout(()=>connectMQTT(MQTT_BROKERS[mqttBrokerIdx]),2000);
