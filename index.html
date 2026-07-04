@@ -729,7 +729,7 @@ function addRow(){
     const pi=panels.length;
     const tf=nextPoolTF();
     if(!userTFs.includes(tf))userTFs.push(tf);
-    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
+    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,wsGen:0,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
     const pnlDiv=document.createElement('div');
     pnlDiv.className='pnl';pnlDiv.id=`pnl-${pi}`;
     grid.appendChild(pnlDiv);
@@ -744,7 +744,7 @@ function removeRow(){
   for(let i=0;i<toRemove;i++){
     const pi=panels.length-1;
     const p=panels[pi];
-    if(p.ws){try{p.ws.close();}catch(_){}}
+    closePanelWS(p);
     if(p._vraf)cancelAnimationFrame(p._vraf);
     if(p.chart){try{p.chart.remove();}catch(_){}}
     document.getElementById(`pnl-${pi}`)?.remove();
@@ -756,7 +756,7 @@ function removeRow(){
 // 按给定周期列表推倒重建全部视窗（切换预设/恢复设置时用）
 function rebuildPanels(tfs){
   panels.forEach(p=>{
-    if(p.ws){try{p.ws.close();}catch(_){}}
+    closePanelWS(p);
     if(p._vraf)cancelAnimationFrame(p._vraf);
     if(p.chart){try{p.chart.remove();}catch(_){}}
   });
@@ -765,7 +765,7 @@ function rebuildPanels(tfs){
   grid.innerHTML='';
   tfs.forEach((tf,i)=>{
     if(!userTFs.includes(tf))userTFs.push(tf);
-    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
+    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,wsGen:0,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
     const pnlDiv=document.createElement('div');
     pnlDiv.className='pnl';pnlDiv.id=`pnl-${i}`;
     grid.appendChild(pnlDiv);
@@ -803,7 +803,7 @@ async function loadPanel(pi){
   const cw=document.getElementById(`cw-${pi}`);
   if(!cw)return;
   if(p.chart){try{p.chart.remove();}catch(_){}p.chart=null;}
-  if(p.ws){try{p.ws.close();}catch(_){}p.ws=null;}
+  closePanelWS(p);
   if(p._vraf){cancelAnimationFrame(p._vraf);p._vraf=null;}
   p.noMore=false;
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
@@ -1068,13 +1068,23 @@ function onCross(pi,param){
 // 币安 WebSocket 实时推送
 // subKline=每个视窗的K线实时更新  startTicker=顶栏价格
 // 断线自动重连，间隔指数退避(1s→2s→…→最长16s)
+//
+// 【僵尸连接防护】每个视窗有一个代号 p.wsGen：
+//   - 每次订阅新周期时代号+1（closePanelWS 也会+1）
+//   - 断线重连前先核对代号，对不上=这条连接已被淘汰，不再重连
+//   - 收到消息也核对代号，淘汰连接的迟到消息直接丢弃
+// 否则旧周期的连接会在被 close() 后通过 onclose 自动"复活"，
+// 持续把旧周期（如1s）的K线灌进已切换周期的视窗 ← 曾导致的bug
 // ══════════════════════════════════════════════
 function subKline(pi){
   const p=panels[pi];let retry=1000;
+  const gen=++p.wsGen;                 // 本次订阅的代号
   const url=`wss://stream.binance.com:9443/ws/btcusdt@kline_${p.tf}`;
   function conn(){
+    if(p.wsGen!==gen)return;           // 已被新订阅/关闭淘汰 → 不再建立连接
     const ws=new WebSocket(url);p.ws=ws;
     ws.onmessage=evt=>{
+      if(p.wsGen!==gen)return;         // 淘汰连接的迟到消息，丢弃
       try{
         const k=JSON.parse(evt.data).k;if(!k)return;
         const c={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v};
@@ -1086,10 +1096,17 @@ function subKline(pi){
         updatePP(pi);schedVPVR(pi);retry=1000;
       }catch(_){}
     };
-    ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
+    // 只有代号仍有效时才自动重连（意外断线）；主动关闭不会走到重连
+    ws.onclose=()=>{if(p.wsGen===gen)setTimeout(conn,retry=Math.min(retry*2,16000));};
     ws.onerror=()=>ws.close();
   }
   conn();
+}
+
+// 统一的视窗WebSocket关闭入口：代号+1使旧连接彻底作废，再关闭
+function closePanelWS(p){
+  p.wsGen=(p.wsGen||0)+1;
+  if(p.ws){try{p.ws.close();}catch(_){}p.ws=null;}
 }
 function startTicker(){
   let retry=1000;
