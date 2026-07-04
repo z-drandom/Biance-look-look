@@ -124,6 +124,8 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 
 /* ── CHART WRAPPER ── */
 .cw{flex:1;position:relative;overflow:hidden}
+/* 🔗锁定时的中心参考线（竖直虚线，标记联动对齐的中心K线位置） */
+.sync-line{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(249,168,37,.65);z-index:9;pointer-events:none;display:none}
 .ldg{position:absolute;inset:0;background:rgba(19,23,34,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
 .sp{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -812,6 +814,8 @@ async function loadPanel(pi){
     const W=cw.clientWidth||800,H=cw.clientHeight||394;
     const mainDiv=document.createElement('div');mainDiv.style.cssText=`position:absolute;left:0;right:0;top:0;height:${H}px;`;cw.appendChild(mainDiv);
     const vc=document.createElement('canvas');vc.style.cssText='position:absolute;left:0;top:0;pointer-events:none;z-index:8;';vc.width=W;vc.height=H;cw.appendChild(vc);p.vpvrCanvas=vc;
+    // 🔗锁定用的中心参考线（默认隐藏，开启锁定时显示）
+    const sl=document.createElement('div');sl.className='sync-line';sl.id=`sl-${pi}`;cw.appendChild(sl);
     p.chart=LightweightCharts.createChart(mainDiv,{
       width:W,height:H,
       layout:{background:{type:'Solid',color:'#131722'},textColor:'#787b86'},
@@ -852,7 +856,7 @@ async function loadPanel(pi){
     drawAllInds(pi);
     p.chart.subscribeCrosshairMove(param=>onCross(pi,param));
     document.getElementById(`ldg-${pi}`)?.remove();
-    updatePP(pi);subKline(pi);schedVPVR(pi);syncViewBtns(pi);
+    updatePP(pi);subKline(pi);schedVPVR(pi);syncViewBtns(pi);updateSyncLines();
   }catch(e){
     const l=document.getElementById(`ldg-${pi}`);if(l)l.innerHTML=`<span style="color:var(--red)">加载失败: ${e.message}</span>`;
   }
@@ -926,7 +930,23 @@ async function loadMoreHistory(pi){
 function toggleSyncLock(){
   syncLock=!syncLock;
   document.getElementById('sync-btn')?.classList.toggle('on',syncLock);
+  updateSyncLines();
   if(syncLock&&syncActivePi>=0)syncFromPanel(syncActivePi); // 开启瞬间先对齐一次
+}
+
+// 更新每个视窗的中心参考线：位置=绘图区（不含右侧价格轴）的正中间
+// 锁定开=显示，锁定关=隐藏；窗口/行高变化时也会重算
+function updateSyncLines(){
+  panels.forEach((p,pi)=>{
+    const sl=document.getElementById(`sl-${pi}`);
+    if(!sl)return;
+    if(!syncLock){sl.style.display='none';return;}
+    const cw=document.getElementById(`cw-${pi}`);
+    if(!cw||!p.chart){sl.style.display='none';return;}
+    const axisW=(p.chart.priceScale('right').width&&p.chart.priceScale('right').width())||65;
+    sl.style.left=Math.round((cw.clientWidth-axisW)/2)+'px';
+    sl.style.display='block';
+  });
 }
 
 // 二分查找：在 candles 里找时间最接近 t 的K线下标
@@ -1147,6 +1167,7 @@ function resizeAll(){
     schedVPVR(pi);
   });
   refreshMinimap();
+  updateSyncLines();
 }
 
 // 重画缩略图：每个视窗一个小方块（按真实位置/高度等比缩小）
