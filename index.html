@@ -808,6 +808,7 @@ async function loadPanel(pi){
   closePanelWS(p);
   if(p._vraf){cancelAnimationFrame(p._vraf);p._vraf=null;}
   p.noMore=false;
+  p.histMode=false;   // 重新加载=回到实时模式
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
   try{
     const candles=await fetchCandles(p.tf);p.candles=candles;
@@ -961,6 +962,9 @@ function nearestIdx(candles,t){
 }
 
 // 以 srcPi 视窗的中心时刻为基准，平移其他所有视窗
+// 目标时刻在已加载数据内 → 直接平移对齐
+// 目标时刻超出已加载范围 → 防抖250ms后按时间戳远程取数跳转(jumpToTime)
+//（例：3d拖到2022年，1m视窗本地只有最近33小时数据，必须重新拉取2022年附近的1m数据）
 function syncFromPanel(srcPi){
   const src=panels[srcPi];
   if(!src||!src.chart||!src.candles?.length)return;
@@ -974,12 +978,67 @@ function syncFromPanel(srcPi){
     if(pi===srcPi||!p.chart||!p.candles?.length)return;
     const plr=p.chart.timeScale().getVisibleLogicalRange();
     if(!plr)return;
+    const sec=tfToSec(p.tf);
+    const first=p.candles[0].time,last=p.candles[p.candles.length-1].time;
+    if(centerTime<first-sec||centerTime>last+sec){
+      // 超出本地数据范围：防抖安排一次"时间跳转"取数（拖动停顿后才真正请求）
+      clearTimeout(p._jumpTimer);
+      p._jumpTimer=setTimeout(()=>jumpToTime(pi,centerTime),250); // ★防抖时长(ms)
+      return;
+    }
+    clearTimeout(p._jumpTimer); // 目标回到范围内，取消挂起的跳转
     const span=plr.to-plr.from;              // 保持该视窗自己的缩放宽度
     const idx=nearestIdx(p.candles,centerTime); // 对齐到最接近中心时刻的K线
     p.chart.timeScale().setVisibleLogicalRange({from:idx-span/2,to:idx+span/2});
     schedVPVR(pi);
   });
   _syncApplying=false;
+}
+
+// 「时间跳转」：以目标时刻为中心，远程抓取约2000根K线整体替换本视窗数据
+// 跳转后再往左拖仍可继续加载更早历史；把锁定源拖回近期会自动再跳回来
+async function jumpToTime(pi,t){
+  const p=panels[pi];
+  if(!p||!p.chart)return;
+  if(p._jumping){p._jumpAgain=t;return;}   // 已在跳转中：记下最新目标，完成后再跳
+  p._jumping=true;
+  try{
+    const sec=tfToSec(p.tf);
+    // 第一批：endTime=目标时刻+500根 → 目标K线落在这批的中间附近
+    const end1=(t+500*sec)*1000;
+    const r1=await fetch(`${REST}/klines?symbol=${SYM}&interval=${p.tf}&limit=1000&endTime=${end1}`);
+    const d1=await r1.json();
+    if(!Array.isArray(d1)||!d1.length)return;
+    let all=d1.map(pk);
+    try{ // 第二批：再往前接1000根
+      const r2=await fetch(`${REST}/klines?symbol=${SYM}&interval=${p.tf}&limit=1000&endTime=${d1[0][0]-1}`);
+      const d2=await r2.json();
+      if(Array.isArray(d2)&&d2.length)all=[...d2.map(pk),...all];
+    }catch(_){}
+    p.candles=all;
+    p.noMore=false;                        // 新位置左侧还有更早历史可加载
+    // 历史模式：窗口末尾距当前时间超过2根K线 → 暂停实时推送写入
+    //（否则WS会把"现在"的K线接到2022年数据后面，形成跨年断层）
+    p.histMode=all[all.length-1].time < Date.now()/1000-2*sec;
+    p.candleSeries.setData(all);
+    drawAllInds(pi);
+    // 把目标时刻的K线摆到视窗中心（保持原缩放宽度）
+    const lr=p.chart.timeScale().getVisibleLogicalRange();
+    const span=lr?(lr.to-lr.from):200;
+    const idx=nearestIdx(all,t);
+    _syncApplying=true;
+    p.chart.timeScale().setVisibleLogicalRange({from:idx-span/2,to:idx+span/2});
+    _syncApplying=false;
+    schedVPVR(pi);
+  }catch(_){}finally{
+    p._jumping=false;
+    // 跳转期间锁定源又移动了 → 若新目标仍超范围就补一跳
+    if(p._jumpAgain!=null){
+      const t2=p._jumpAgain;p._jumpAgain=null;
+      const first=p.candles[0]?.time,last=p.candles[p.candles.length-1]?.time;
+      if(first!=null&&(t2<first||t2>last))jumpToTime(pi,t2);
+    }
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1105,6 +1164,7 @@ function subKline(pi){
     const ws=new WebSocket(url);p.ws=ws;
     ws.onmessage=evt=>{
       if(p.wsGen!==gen)return;         // 淘汰连接的迟到消息，丢弃
+      if(p.histMode)return;            // 视窗正在看历史（时间跳转后），暂停实时写入
       try{
         const k=JSON.parse(evt.data).k;if(!k)return;
         const c={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c,volume:+k.v};
