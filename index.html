@@ -253,7 +253,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   </div>
   <div id="g-period-row" class="grow">
     <span class="gl">周期</span>
-    <input class="ginp" id="g-period" type="number" min="1" max="2000" value="21">
+    <input class="ginp" id="g-period" type="number" min="1" value="21">
   </div>
   <div id="g-mult-row" class="grow" style="display:none">
     <span class="gl">倍数</span>
@@ -858,6 +858,7 @@ async function loadPanel(pi){
     p.chart.subscribeCrosshairMove(param=>onCross(pi,param));
     document.getElementById(`ldg-${pi}`)?.remove();
     updatePP(pi);subKline(pi);schedVPVR(pi);syncViewBtns(pi);updateSyncLines();
+    ensureIndDepth(pi); // 大周期指标自动补历史（后台进行，不阻塞显示）
   }catch(e){
     const l=document.getElementById(`ldg-${pi}`);if(l)l.innerHTML=`<span style="color:var(--red)">加载失败: ${e.message}</span>`;
   }
@@ -923,6 +924,31 @@ async function loadMoreHistory(pi){
     if(before)ts.setVisibleLogicalRange({from:before.from+added,to:before.to+added});
   }catch(_){}finally{p.loadingMore=false;}
 }
+
+// ── 自动补齐指标所需的历史深度 ──
+// 均线周期需要至少 p 根K线才能算出第一个点（如 MA10000 需要 1 万根）。
+// 本地不够时自动连续往前补历史，直到够用或没有更早数据。
+// ★MAX_ROUNDS=单次最多补的批数（每批1000根），防止极端周期打爆接口
+async function ensureIndDepth(pi){
+  const p=panels[pi];
+  if(!p||!p.chart||p._deepening)return;
+  const need=Math.max(0,...sharedInds.filter(i=>i.type==='ma-line'&&!i.hidden).map(i=>i.p||0),
+                        ...sharedInds.filter(i=>i.type==='bb'&&!i.hidden).map(i=>i.p||0));
+  if(!need)return;
+  const MAX_ROUNDS=30; // 30批=3万根上限，够 MA10000 的 TEMA 预热
+  p._deepening=true;
+  try{
+    let rounds=0;
+    while(p.candles.length<need+100&&!p.noMore&&rounds<MAX_ROUNDS){
+      const before=p.candles.length;
+      await loadMoreHistory(pi);
+      if(p.candles.length===before)break; // 没有新增（接口异常等），停止
+      rounds++;
+    }
+  }finally{p._deepening=false;}
+}
+// 所有视窗都补齐一遍（新增/修改大周期指标后调用）
+function ensureIndDepthAll(){panels.forEach((_,i)=>ensureIndDepth(i));}
 
 // ══════════════════════════════════════════════
 // 🔗联动锁定：拖动A视窗时，其他视窗把「A中心K线的时刻」
@@ -1111,7 +1137,7 @@ function commitPop(){
   const width=parseInt(document.getElementById('g-vw').value)||18;
   if(POP.mode==='add'){
     const ind={id:uid(),type,color,fs:10,hidden:false};
-    if(type==='ma-line'){ind.p=Math.max(1,Math.min(2000,period));}
+    if(type==='ma-line'){ind.p=Math.max(1,period);} // 周期无上限（如10000）
     if(type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
     if(type==='vpvr'){ind.rows=rows;ind.width=width;}
     _pidx++;sharedInds.push(ind);
@@ -1119,12 +1145,12 @@ function commitPop(){
     const ind=sharedInds.find(i=>i.id===POP.indId);
     if(ind){
       ind.color=color;ind.lw=undefined;
-      if(ind.type==='ma-line')ind.p=Math.max(1,Math.min(2000,period));
+      if(ind.type==='ma-line')ind.p=Math.max(1,period); // 周期无上限
       if(ind.type==='bb'){ind.p=Math.max(2,Math.min(500,period));ind.m=mult;}
       if(ind.type==='vpvr'){ind.rows=rows;ind.width=width;}
     }
   }
-  renderSharedChips();redrawAllPanels();closePop();saveSettings();
+  renderSharedChips();redrawAllPanels();closePop();saveSettings();ensureIndDepthAll();
 }
 
 // ══════════════════════════════════════════════
