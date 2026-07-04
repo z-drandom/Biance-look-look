@@ -14,8 +14,8 @@
    --green 涨   --red 跌   --blue 主题蓝（选中态/按钮）
    ═══════════════════════════════════════════════════════════ */
 :root{
-  --bg:#131722;--bg2:#1e222d;--bg3:#2a2e39;--border:#363c4e;
-  --text:#d1d4dc;--text2:#787b86;
+  --bg:#ffffff;--bg2:#f0f3fa;--bg3:#e0e3eb;--border:#d1d4dc;
+  --text:#131722;--text2:#787b86;
   --green:#26a69a;--red:#ef5350;--blue:#2962ff;
   --yellow:#f9a825;--orange:#ff9800;
 }
@@ -26,7 +26,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 /* ── 顶部行情栏（价格/24H高低量/资金费率/未平仓） ──
    height:46px 改这里可调顶栏高度 */
 #hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;gap:14px;height:46px;flex-shrink:0}
-#logo{font-size:14px;font-weight:700;color:#fff;white-space:nowrap}
+#logo{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
 #lp{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
 #lp.up{color:var(--green)}#lp.dn{color:var(--red)}
 #pc{font-size:11px;font-weight:600;padding:2px 7px;border-radius:3px}
@@ -46,13 +46,13 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 }
 .ma-grp{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
 .ma-btn{padding:0 9px;height:20px;background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:700;transition:all .12s;letter-spacing:.2px}
-.ma-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.ma-btn:hover{background:rgba(0,0,0,.05);color:var(--text)}
 .ma-btn.on{background:var(--blue);color:#fff}
 .isep{width:1px;height:18px;background:var(--border);flex-shrink:0}
 #sh-chips{display:flex;gap:3px;flex:1;align-items:center;overflow:hidden;min-width:0}
 .chip{display:flex;align-items:center;border-radius:2px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid transparent;line-height:1;transition:opacity .15s}
 .chip.hidden-ind{opacity:.35}
-.chip:hover{filter:brightness(1.3)}
+.chip:hover{filter:brightness(.85)}
 .chip .cl{padding:1px 4px}
 .chip .eye{padding:1px 4px;opacity:.55;cursor:pointer;font-size:12px;line-height:1;transition:opacity .1s;user-select:none}
 .chip .eye:hover{opacity:1}
@@ -126,17 +126,17 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .cw{flex:1;position:relative;overflow:hidden}
 /* 🔗锁定时的中心参考线（竖直虚线，标记联动对齐的中心K线位置） */
 .sync-line{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(249,168,37,.65);z-index:9;pointer-events:none;display:none}
-.ldg{position:absolute;inset:0;background:rgba(19,23,34,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
+.ldg{position:absolute;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
 .sp{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── GLOBAL POPOVER ── */
-#gpop{position:fixed;z-index:1000;background:#1e222d;border:1px solid #363c4e;border-radius:6px;padding:12px 14px;min-width:215px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:none;flex-direction:column;gap:9px}
+#gpop{position:fixed;z-index:1000;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;min-width:215px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:9px}
 #gpop.show{display:flex}
 #gpop h4{font-size:12px;font-weight:700;color:var(--text)}
 .grow{display:flex;align-items:center;gap:8px}
 .gl{color:var(--text2);font-size:11px;width:52px;flex-shrink:0}
-.gsel,.ginp{background:#2a2e39;border:1px solid #363c4e;color:var(--text);border-radius:3px;padding:3px 7px;font-size:12px;outline:none;flex:1}
+.gsel,.ginp{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:3px 7px;font-size:12px;outline:none;flex:1}
 .gsel:focus,.ginp:focus{border-color:var(--blue)}
 .ginp{width:80px;flex:none}
 .gbtn{padding:5px 14px;background:var(--blue);border:none;color:#fff;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600}
@@ -152,15 +152,15 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .tf-chip .tcx:hover{opacity:1;color:var(--red)}
 
 /* ── PRESET / RESTORE MODAL ── */
-#preset-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center}
+#preset-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2000;display:none;align-items:center;justify-content:center}
 #preset-modal.show{display:flex}
-.pm-box{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:22px 24px;min-width:340px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px}
-.pm-box h3{font-size:15px;font-weight:700;color:#fff}
+.pm-box{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:22px 24px;min-width:340px;max-width:90vw;box-shadow:0 12px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px}
+.pm-box h3{font-size:15px;font-weight:700;color:var(--text)}
 .pm-box .pm-sub{font-size:11px;color:var(--text2);line-height:1.5}
 .pm-sec{font-size:11px;color:var(--text2);font-weight:700;margin-top:4px}
 .pm-btn{text-align:left;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:9px 12px;font-size:12px;cursor:pointer;transition:all .12s}
 .pm-btn:hover{border-color:var(--blue);background:rgba(41,98,255,.12)}
-.pm-btn b{color:#fff;font-size:13px}
+.pm-btn b{color:var(--text);font-size:13px}
 .pm-btn .pm-d{display:block;font-size:10px;color:var(--text2);margin-top:2px}
 .pm-btn.restore{border-color:var(--green)}
 .pm-btn.restore b{color:var(--green)}
@@ -200,7 +200,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 </div>
 
 <!-- ── TF MANAGER POPOVER ── -->
-<div id="tfpop" style="position:fixed;z-index:1001;background:#1e222d;border:1px solid #363c4e;border-radius:6px;padding:12px 14px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:none;flex-direction:column;gap:9px">
+<div id="tfpop" style="position:fixed;z-index:1001;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:9px">
   <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" onclick="closeTFMgr()">✕</button>
   <h4 style="font-size:12px;font-weight:700;color:var(--text)">管理时间周期</h4>
   <div id="tf-chips" style="display:flex;flex-wrap:wrap;gap:4px;max-height:110px;overflow-y:auto"></div>
@@ -823,15 +823,15 @@ async function loadPanel(pi){
     const sl=document.createElement('div');sl.className='sync-line';sl.id=`sl-${pi}`;cw.appendChild(sl);
     p.chart=LightweightCharts.createChart(mainDiv,{
       width:W,height:H,
-      layout:{background:{type:'Solid',color:'#131722'},textColor:'#787b86'},
-      grid:{vertLines:{color:'#1c2030'},horzLines:{color:'#1c2030'}},
+      layout:{background:{type:'Solid',color:'#ffffff'},textColor:'#787b86'},
+      grid:{vertLines:{color:'#f0f3fa'},horzLines:{color:'#f0f3fa'}},
       crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
-      rightPriceScale:{borderColor:'#363c4e',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
+      rightPriceScale:{borderColor:'#d1d4dc',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
       // ★K线缩放核心参数：
       //   rightOffset:12   最新K线右侧留12根的空隙（避开价格轴和VPVR）
       //   barSpacing:2     默认每根K线占2px（=缩到最小）；改大=默认更宽
       //   minBarSpacing:1  滚轮能缩到的极限
-      timeScale:{borderColor:'#363c4e',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1},
+      timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1},
       handleScroll:true,handleScale:true,
     });
     p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
