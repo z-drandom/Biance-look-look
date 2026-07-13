@@ -130,6 +130,9 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .cw{flex:1;position:relative;overflow:hidden}
 /* 🔗锁定时的中心参考线（竖直虚线，标记联动对齐的中心K线位置） */
 .sync-line{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(249,168,37,.65);z-index:9;pointer-events:none;display:none}
+/* 十字线时间标签（自绘）：跟随鼠标横向移动，贴在时间轴上
+   内置标签在K线右侧空白区（未来）不显示时间，故禁用内置、全程用这个 */
+.tlab{position:absolute;bottom:2px;transform:translateX(-50%);background:#131722;color:#fff;font-size:10px;padding:2px 6px;border-radius:2px;z-index:12;pointer-events:none;white-space:nowrap;display:none}
 .ldg{position:absolute;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
 .sp{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -850,17 +853,21 @@ async function loadPanel(pi){
     const vc=document.createElement('canvas');vc.style.cssText='position:absolute;left:0;top:0;pointer-events:none;z-index:8;';vc.width=W;vc.height=H;cw.appendChild(vc);p.vpvrCanvas=vc;
     // 🔗锁定用的中心参考线（默认隐藏，开启锁定时显示）
     const sl=document.createElement('div');sl.className='sync-line';sl.id=`sl-${pi}`;cw.appendChild(sl);
+    // 十字线的中文时间标签（跟随鼠标，未来空白区也能显示推算时间）
+    const tl=document.createElement('div');tl.className='tlab';tl.id=`tlab-${pi}`;cw.appendChild(tl);
     p.chart=LightweightCharts.createChart(mainDiv,{
       width:W,height:H,
       layout:{background:{type:'Solid',color:'#ffffff'},textColor:'#787b86'},
       grid:{vertLines:{color:'#f0f3fa'},horzLines:{color:'#f0f3fa'}},
-      crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+      // 内置时间标签在数据右侧空白区不显示 → 禁用，改用自绘中文标签(.tlab)
+      crosshair:{mode:LightweightCharts.CrosshairMode.Normal,vertLine:{labelVisible:false}},
+      localization:{locale:'zh-CN'},
       rightPriceScale:{borderColor:'#d1d4dc',scaleMargins:{top:.05,bottom:.04},mode:p.logMode?1:0,invertScale:!!p.invMode},
       // ★K线缩放核心参数：
       //   rightOffset:12   最新K线右侧留12根的空隙（避开价格轴和VPVR）
       //   barSpacing:2     默认每根K线占2px（=缩到最小）；改大=默认更宽
       //   minBarSpacing:1  滚轮能缩到的极限
-      timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1},
+      timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1,tickMarkFormatter:cnTick},
       handleScroll:true,handleScale:true,
     });
     p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
@@ -1196,7 +1203,26 @@ function updatePP(pi){
   if(el){el.textContent=fmt(last.close);el.style.color=last.close>=last.open?'var(--green)':'var(--red)';}
 }
 function onCross(pi,param){
-  const p=panels[pi];if(!param.time||!p.candles)return;
+  const p=panels[pi];
+  // ── 自绘时间标签：K线区内取该K线时间；右侧空白区（未来）按周期外推 ──
+  const lab=document.getElementById(`tlab-${pi}`);
+  if(lab){
+    if(!param.point||param.logical==null||!p.candles?.length){
+      lab.style.display='none';           // 鼠标离开图表
+    }else{
+      const sec=tfToSec(p.tf),len=p.candles.length;
+      const li=Math.round(param.logical); // 鼠标所在的逻辑K线序号（可超出数据范围）
+      let t;
+      if(li<0)t=p.candles[0].time+li*sec;                       // 左侧空白（更早）
+      else if(li>=len)t=p.candles[len-1].time+(li-(len-1))*sec; // 右侧空白（未来）
+      else t=p.candles[li].time;                                // 数据范围内
+      lab.textContent=fmtCNTime(t,sec);
+      lab.style.left=param.point.x+'px';
+      lab.style.display='block';
+    }
+  }
+  // ── 工具条上的OHLC显示（悬停在某根K线上时） ──
+  if(!param.time||!p.candles)return;
   const c=p.candles.find(x=>x.time===param.time);if(!c)return;
   const el=document.getElementById(`pp-${pi}`);
   if(el){el.textContent=`O:${fmt(c.open)} H:${fmt(c.high)} L:${fmt(c.low)} C:${fmt(c.close)}`;el.style.color=c.close>=c.open?'var(--green)':'var(--red)';el.style.fontSize='9px';}
@@ -1431,6 +1457,29 @@ window.addEventListener('resize',()=>{if(!rowHManual)setDefaultRowH();});
   });
   document.addEventListener('mouseup',()=>{if(dragging){dragging=false;resizeAll();}});
 })();
+
+// ══════════════════════════════════════════════
+// 中文时间格式化
+// cnTick=时间轴刻度（按缩放级别显示 年/月/日/时分）
+// fmtCNTime=十字线标签的完整中文时间
+// ══════════════════════════════════════════════
+const p2=n=>String(n).padStart(2,'0');
+function cnTick(time,type){
+  const d=new Date(time*1000);
+  // type: 0=年 1=月 2=日 3=时分 4=时分秒（lightweight-charts的TickMarkType）
+  if(type===0)return d.getFullYear()+'年';
+  if(type===1)return (d.getMonth()+1)+'月';
+  if(type===2)return d.getDate()+'日';
+  if(type===4)return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  return `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+function fmtCNTime(t,sec){
+  const d=new Date(t*1000);
+  const date=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+  if(sec>=86400)return date;                       // 日线及以上：只显示日期
+  if(sec<60)return `${date} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; // 秒级
+  return `${date} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
 
 // ══════════════════════════════════════════════
 // 数字格式化：fmt=价格(≥1万去小数)  fmtV=成交量(K/M/B缩写)
