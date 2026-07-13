@@ -103,6 +103,9 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .vm-btn:hover{border-color:#888;color:var(--text)}
 .vm-btn.on{background:rgba(41,98,255,.25);border-color:var(--blue);color:var(--blue)}
 .pp{margin-left:auto;font-size:10px;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap;flex-shrink:0}
+/* 视窗右上角的关闭按钮 */
+.pcx{background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:0 2px 0 6px;flex-shrink:0;line-height:1}
+.pcx:hover{color:var(--red)}
 
 /* ── CHART WRAPPER ── */
 .cw{flex:1;position:relative;overflow:hidden}
@@ -177,8 +180,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div class="isep"></div>
   <button class="add-ind" id="tf-mgr-btn" onclick="openTFMgr(this)" title="管理时间周期">⏱+</button>
   <div class="isep"></div>
-  <button class="row-btn" onclick="addRow()" title="增加一行">+行</button>
-  <button class="row-btn" onclick="removeRow()" title="减少一行">-行</button>
+  <button class="row-btn" onclick="addPanel()" title="新增视窗（自动接续当前最大周期）">+窗</button>
   <div class="isep"></div>
   <button class="row-btn" id="sync-btn" onclick="toggleSyncLock()" title="锁定后：拖动任一视窗，其他视窗自动以相同时刻K线对齐到各自中心">🔗锁定</button>
   <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
@@ -270,7 +272,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
                         搜 visN=             → 首屏显示多少根K线的算法
    【视窗行高】          搜 defaultRowH       → 默认=可视区一半（2行铺满）
                         搜 Math.min(1200     → 拖动行高的上限/下限(160)
-   【最大视窗数】        搜 panels.length>=12 → 最多12个（6行×2列）
+   【最大视窗数】        搜 panels.length>=16 → 最多16个（8行×2列）
    【VPVR】             搜 HIGHLIGHT_N       → 高亮最短的几根（默认3）
                         搜 rgba(239,83,80    → 高亮色 / rgba(41,98,255 → 普通色
                         搜 axisW             → 距右侧价格轴的间距（自动取轴宽，兜底65px）
@@ -287,8 +289,6 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 const SYM='BTCUSDT', REST='https://api.binance.com/api/v3', FAPI='https://fapi.binance.com/fapi/v1';
 // 币安官方支持的全部K线周期（内置列表，用户可在⏱+菜单里增删）
 const BINANCE_TFS=['1s','1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
-// 点「+行」新增视窗时，从这个池子里按从小到大挑还没用过的周期
-const TF_POOL=['1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
 
 // 版本号：每次发布新版把这个数字+1，老用户刷新时会弹出「恢复上次设置/选默认界面」
 const APP_VERSION='3';
@@ -696,43 +696,46 @@ document.addEventListener('click',e=>{
 });
 
 // ══════════════════════════════════════════════
-// 行管理：+行/-行 按钮，每次增减2个视窗（1行）
+// 视窗管理：+窗按钮逐个新增（自动接续更大周期），
+// 每个视窗右上角✕单独关闭，后面的视窗自动补位
 // ══════════════════════════════════════════════
-// 新视窗自动选一个还没用过的最小周期（保持从小到大的排列感）
-function nextPoolTF(){
+// 新视窗周期 = 比当前所有视窗里最大的周期更大的下一档
+// （如当前最大1h → 依次2h、4h、6h、8h…；到顶后选未使用的周期）
+function nextPanelTF(){
+  const pool=sortedTFs();
+  if(!panels.length)return pool[0]||'1h';
+  const maxSec=Math.max(...panels.map(p=>tfToSec(p.tf)));
+  for(const tf of pool){if(tfToSec(tf)>maxSec)return tf;}
   const used=new Set(panels.map(p=>p.tf));
-  for(const tf of TF_POOL){if(!used.has(tf))return tf;}
-  return '1h';
+  for(const tf of pool){if(!used.has(tf))return tf;}
+  return pool[pool.length-1]||'1h';
 }
-function addRow(){
-  if(panels.length>=12)return;  // ★最大视窗数：12个=6行，想加就改这里(两处)
+function addPanel(){
+  if(panels.length>=16)return;  // ★最大视窗数：16个=8行，想加就改这里
   const grid=document.getElementById('grid');
-  for(let i=0;i<2&&panels.length<12;i++){
-    const pi=panels.length;
-    const tf=nextPoolTF();
-    if(!userTFs.includes(tf))userTFs.push(tf);
-    panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,wsGen:0,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
-    const pnlDiv=document.createElement('div');
-    pnlDiv.className='pnl';pnlDiv.id=`pnl-${pi}`;
-    grid.appendChild(pnlDiv);
-    buildDOM(pi);
-    loadPanel(pi);
-  }
+  const pi=panels.length;
+  const tf=nextPanelTF();
+  panels.push({tf,candles:[],seriesMap:{},chart:null,ws:null,wsGen:0,vpvrCanvas:null,_vraf:null,logMode:false,invMode:false});
+  const pnlDiv=document.createElement('div');
+  pnlDiv.className='pnl';pnlDiv.id=`pnl-${pi}`;
+  grid.appendChild(pnlDiv);
+  buildDOM(pi);
+  loadPanel(pi);
   refreshMinimap();saveSettings();
 }
-function removeRow(){
-  if(panels.length<=2)return;  // 最少保留1行（2个视窗）
-  const toRemove=Math.min(2,panels.length-2);
-  for(let i=0;i<toRemove;i++){
-    const pi=panels.length-1;
-    const p=panels[pi];
-    closePanelWS(p);
-    if(p._vraf)cancelAnimationFrame(p._vraf);
-    if(p.chart){try{p.chart.remove();}catch(_){}}
-    document.getElementById(`pnl-${pi}`)?.remove();
-    panels.pop();
+// 关闭单个视窗：保留其余视窗的周期与视图模式，整体重建（自动补位）
+// 说明：视窗的WS/图表回调都以序号绑定，抽走中间一个后序号会错位，
+// 因此用「记录状态→重建」的方式，简单且不会留下僵尸连接
+function closePanel(pi){
+  if(panels.length<=1)return;   // 至少保留1个视窗
+  if(maximizedPi>=0){           // 若在最大化模式先退出
+    maximizedPi=-1;
+    document.getElementById('grid')?.classList.remove('has-max');
   }
-  refreshMinimap();saveSettings();
+  const states=panels.filter((_,i)=>i!==pi).map(p=>({tf:p.tf,log:p.logMode,inv:p.invMode}));
+  rebuildPanels(states.map(st=>st.tf));
+  states.forEach((st,i)=>{if(panels[i]){panels[i].logMode=st.log;panels[i].invMode=st.inv;}});
+  saveSettings();
 }
 
 // 按给定周期列表推倒重建全部视窗（切换预设/恢复设置时用）
@@ -771,7 +774,9 @@ function buildDOM(pi){
   const logBtn=document.createElement('button');logBtn.className='vm-btn';logBtn.id=`log-${pi}`;logBtn.textContent='LOG';logBtn.title='对数坐标';logBtn.onclick=()=>toggleLog(pi);
   const invBtn=document.createElement('button');invBtn.className='vm-btn';invBtn.id=`inv-${pi}`;invBtn.textContent='↕';invBtn.title='倒垂视图';invBtn.onclick=()=>toggleInvert(pi);
   const pp=document.createElement('span');pp.className='pp';pp.id=`pp-${pi}`;pp.textContent='--';
-  tb.append(tfsel,logBtn,invBtn,pp);
+  const pcx=document.createElement('button');pcx.className='pcx';pcx.textContent='✕';pcx.title='关闭该视窗';
+  pcx.onclick=e=>{e.stopPropagation();closePanel(pi);};
+  tb.append(tfsel,logBtn,invBtn,pp,pcx);
   const cw=document.createElement('div');cw.className='cw';cw.id=`cw-${pi}`;
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
   el.append(tb,cw);
