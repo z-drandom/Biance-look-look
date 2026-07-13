@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BTC 看盘</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    全局配色变量（改这里即可换全站主题色）
@@ -64,37 +63,16 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .row-btn:hover{border-color:var(--blue);color:var(--blue)}
 .row-btn.on{background:var(--blue);border-color:var(--blue);color:#fff}
 
-/* ── 主体行布局：左侧竖栏 | 右侧图表滚动区 ── */
+/* ── 主体行布局：图表滚动区 | 右侧导航栏 ── */
 #body-row{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0}
 
-/* 左侧竖栏（上半：聊天，下半：缩略导航）
-   width:220px = 左栏默认宽度；右缘可拖动，范围见 JS「左栏宽度拖动」处(150~480) */
-#left-col{width:220px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative;background:var(--bg2)}
-#left-handle{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:20}
-#left-handle:hover{background:var(--blue)}
+/* 右侧竖直导航栏（缩略导航占满整条）
+   width:90px = 导航栏宽度，想更宽改这里 */
+#right-col{width:90px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--bg2)}
 
-/* 聊天区：flex:1 与下方 #minimap 的 flex:1 各占左栏一半
-   想让聊天占更多，把这里改成 flex:2（即 2:1） */
-#chat-bar{flex:1;display:flex;flex-direction:column;min-height:0}
-#chat-hd{font-size:10px;font-weight:700;color:var(--text2);padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px}
-#chat-msgs{flex:1;overflow-y:auto;padding:4px 10px;display:flex;flex-direction:column;gap:3px}
-#chat-msgs::-webkit-scrollbar{width:4px}
-#chat-msgs::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
-.cm{display:flex;flex-direction:column;font-size:11px;line-height:1.35}
-.cm-top{display:flex;align-items:baseline;gap:6px}
-.cn{color:var(--blue);font-weight:700;flex-shrink:0}
-.ct{color:var(--text2);font-size:9px;flex-shrink:0}
-.cb{color:var(--text);word-break:break-word}
-#chat-input-row{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-top:1px solid var(--border);flex-shrink:0}
-#chat-inp{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;padding:4px 8px;font-size:11px;outline:none}
-#chat-inp:focus{border-color:var(--blue)}
-#chat-send{background:var(--blue);border:none;color:#fff;border-radius:3px;padding:4px 10px;font-size:11px;cursor:pointer}
-#chat-send:hover{background:#1e53e5}
-#chat-status{font-size:9px;color:var(--text2)}
-
-/* 缩略导航（滚轮区）：flex:1 占左栏下半部分
-   在这里拖动/点击/滚轮 = 控制右侧整页上下滚动 */
-#minimap{flex:1;min-height:0;border-top:1px solid var(--border);position:relative;overflow:hidden;background:var(--bg);cursor:pointer}
+/* 缩略导航（滚轮区）：占满右栏全高
+   在这里拖动/点击/滚轮 = 控制整页上下滚动 */
+#minimap{flex:1;min-height:0;position:relative;overflow:hidden;background:var(--bg);cursor:pointer}
 #mm-title{position:absolute;top:2px;left:0;right:0;text-align:center;font-size:9px;color:var(--text2);z-index:3;pointer-events:none}
 #mm-track{position:absolute;inset:0}
 .mm-blk{position:absolute;background:var(--bg3);border:1px solid var(--border);border-radius:2px;font-size:9px;font-weight:700;color:var(--text2);display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -221,27 +199,18 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 
 <!-- ── BODY ROW ── -->
 <div id="body-row">
-  <!-- LEFT COLUMN: chat + minimap -->
-  <div id="left-col">
-    <div id="chat-bar">
-      <div id="chat-hd">💬 公共聊天 · <span id="chat-nick-lbl">--</span><span id="chat-status" style="margin-left:auto">○</span></div>
-      <div id="chat-msgs"></div>
-      <div id="chat-input-row">
-        <input id="chat-inp" placeholder="发送消息…" onkeydown="if(event.key==='Enter')sendChat()">
-        <button id="chat-send" onclick="sendChat()">发送</button>
-      </div>
-    </div>
+  <!-- 左：图表滚动区 -->
+  <div id="scroll-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <!-- 右：缩略导航栏 -->
+  <div id="right-col">
     <div id="minimap" title="拖动/滚轮浏览全部周期">
       <div id="mm-title">缩略导航</div>
       <div id="mm-track"></div>
       <div id="mm-thumb"></div>
     </div>
-    <div id="left-handle"></div>
-  </div>
-
-  <!-- RIGHT: scrollable charts -->
-  <div id="scroll-wrap">
-    <div id="grid"></div>
   </div>
 </div>
 
@@ -308,7 +277,6 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
    【指标默认样式】      搜 EMA_RAMP          → 6条均线的颜色/粗细/标签字号
    【界面预设】          搜 PRESETS           → 三款预设的周期和均线参数
    【版本号】            搜 APP_VERSION       → 发新版时+1，用户刷新会弹出界面选择
-   【聊天服务器】        搜 MQTT_BROKERS      → 公共broker列表，可加自建服务器
    【聊天保存条数】      搜 msgs.length>1000  → 本地最多保存1000条
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1443,21 +1411,6 @@ function setDefaultRowH(){applyRowH(defaultRowH());}
 // 浏览器窗口大小变化时，若用户没手动拖过行高则重算默认值
 window.addEventListener('resize',()=>{if(!rowHManual)setDefaultRowH();});
 
-// 左栏宽度拖动（左栏右缘的竖条）
-(function(){
-  const col=document.getElementById('left-col');
-  const handle=document.getElementById('left-handle');
-  let dragging=false,startX=0,startW=0;
-  handle.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=col.offsetWidth;e.preventDefault();});
-  document.addEventListener('mousemove',e=>{
-    if(!dragging)return;
-    // ★左栏宽度范围：最窄150px / 最宽480px
-    const w=Math.max(150,Math.min(480,startW+(e.clientX-startX)));
-    col.style.width=w+'px';
-  });
-  document.addEventListener('mouseup',()=>{if(dragging){dragging=false;resizeAll();}});
-})();
-
 // ══════════════════════════════════════════════
 // 中文时间格式化
 // cnTick=时间轴刻度（按缩放级别显示 年/月/日/时分）
@@ -1488,129 +1441,6 @@ function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
 // ══════════════════════════════════════════════
-// 公共聊天（跨用户实时消息）
-// 原理：所有打开本页的用户订阅同一个公共MQTT主题，互相收发
-// 消息本地存 localStorage（刷新不丢，最多1000条）
-// ══════════════════════════════════════════════
-// broker列表：第1个连不上自动切下一个，循环轮换
-// 想更稳可自建 EMQX/Mosquitto 服务器，把 wss 地址加到最前面
-const MQTT_BROKERS=[
-  'wss://broker.emqx.io:8084/mqtt',   // 主：EMQX 公共服务器
-  'wss://broker.hivemq.com:8000/mqtt',// 备：HiveMQ
-];
-const MQTT_TOPIC='btcll-chat-v1';     // 公共频道名（改了=开新房间，与旧用户隔离）
-const CHAT_KEY='btcll_chat_msgs_v1';  // 本地消息存储键名
-let mqttClient=null;
-let mqttBrokerIdx=0;
-
-// 昵称 = 时区城市前3个字母 + 4位随机数（如 SHA1234），首次生成后固定
-function getNick(){
-  let nick=localStorage.getItem('btcll_nick');
-  if(!nick){
-    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
-    const city=tz.split('/').pop().replace(/_/g,'').substring(0,3).toUpperCase();
-    nick=city+String(Math.floor(1000+Math.random()*9000));
-    localStorage.setItem('btcll_nick',nick);
-  }
-  return nick;
-}
-function getChatMsgs(){try{return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]');}catch(_){return[];}}
-// 存一条消息（按 时间戳+昵称 去重；返回false=重复没存）
-function saveChatMsg(msg){
-  const msgs=getChatMsgs();
-  if(msgs.find(m=>m.ts===msg.ts&&m.nick===msg.nick))return false;
-  msgs.push(msg);
-  if(msgs.length>1000)msgs.splice(0,msgs.length-1000); // ★本地最多保存1000条
-  localStorage.setItem(CHAT_KEY,JSON.stringify(msgs));
-  return true;
-}
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function renderChatMsgs(){
-  const msgs=getChatMsgs();
-  const el=document.getElementById('chat-msgs');if(!el)return;
-  const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<40;
-  el.innerHTML=msgs.map(m=>{
-    const d=new Date(m.ts);
-    const t=d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="cm"><div class="cm-top"><span class="cn">${escHtml(m.nick)}</span><span class="ct">${t}</span></div><span class="cb">${escHtml(m.text)}</span></div>`;
-  }).join('');
-  if(atBottom||msgs.length<=20)el.scrollTop=el.scrollHeight;
-}
-
-function setChatStatus(connected,label){
-  const s=document.getElementById('chat-status');
-  if(!s)return;
-  s.textContent=connected?'●':'○';
-  s.style.color=connected?'var(--green)':'var(--text2)';
-  s.title=label||'';
-}
-
-// 发送：只 publish 到 broker，不直接写本地
-// broker 会把消息回传给包括自己在内的所有订阅者，收到时统一保存+渲染
-// （发送方和接收方走同一条路径，保证大家看到的内容一致）
-function sendChat(){
-  const inp=document.getElementById('chat-inp');
-  const text=inp.value.trim();if(!text)return;
-  if(!mqttClient||!mqttClient.connected){
-    setChatStatus(false,'未连接，消息未发出');
-    return;
-  }
-  const msg={nick:getNick(),text,ts:Date.now()};
-  inp.value='';
-  try{mqttClient.publish(MQTT_TOPIC,JSON.stringify(msg),{qos:1});}catch(e){
-    // 兜底：publish 抛异常时至少存到本地自己能看到
-    saveChatMsg(msg);renderChatMsgs();
-  }
-}
-
-// 连接指定 broker；断开/失败时自动轮换到列表里的下一个
-function connectMQTT(brokerUrl){
-  if(mqttClient){try{mqttClient.end(true);}catch(_){}}
-  setChatStatus(false,'连接中…');
-  const client=mqtt.connect(brokerUrl,{
-    clientId:'btcll_'+Math.random().toString(36).slice(2,10),
-    reconnectPeriod:0,     // 关掉库自带重连，由下面 tryNext 手动轮换broker
-    connectTimeout:10000,  // 连接超时(ms)
-    keepalive:30,          // 心跳间隔(s)
-    clean:true,
-  });
-  mqttClient=client;
-  let connected=false;
-
-  client.on('connect',()=>{
-    connected=true;
-    client.subscribe(MQTT_TOPIC,{qos:1});
-    setChatStatus(true,brokerUrl); // 状态点悬停可看到当前用的哪个服务器
-  });
-
-  client.on('message',(_t,payload)=>{
-    try{
-      const msg=JSON.parse(payload.toString());
-      if(saveChatMsg(msg))renderChatMsgs();
-    }catch(_){}
-  });
-
-  // 失败切换下一个 broker（2~3秒后重试）
-  const tryNext=()=>{
-    if(client!==mqttClient)return; // 已被新连接替代则忽略
-    mqttBrokerIdx=(mqttBrokerIdx+1)%MQTT_BROKERS.length;
-    setChatStatus(false,'切换服务器…');
-    setTimeout(()=>connectMQTT(MQTT_BROKERS[mqttBrokerIdx]),2000);
-  };
-  client.on('error',()=>{if(!connected)tryNext();});
-  client.on('close',()=>{
-    setChatStatus(false,'已断开');
-    setTimeout(tryNext,3000);
-  });
-}
-
-function initChat(){
-  document.getElementById('chat-nick-lbl').textContent=getNick();
-  renderChatMsgs();
-  try{connectMQTT(MQTT_BROKERS[0]);}catch(e){console.warn('MQTT init failed',e);}
-}
-
-// ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
 function bootCommon(){
@@ -1618,7 +1448,6 @@ function bootCommon(){
   startTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>panels.forEach((_,i)=>schedVPVR(i)),600);
-  initChat();
 }
 
 function init(){
