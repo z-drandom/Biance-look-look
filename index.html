@@ -183,6 +183,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <button class="row-btn" onclick="addPanel()" title="新增视窗（自动接续当前最大周期）">+窗</button>
   <div class="isep"></div>
   <button class="row-btn" id="sync-btn" onclick="toggleSyncLock()" title="锁定后：拖动任一视窗，其他视窗自动以相同时刻K线对齐到各自中心">🔗锁定</button>
+  <button class="row-btn" id="jump-btn" onclick="openJumpPop(this)" title="输入时间，所有视窗同步跳转到该历史时刻">🕐跳转</button>
   <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
 </div>
 
@@ -197,6 +198,18 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
     <button class="gbtn" style="padding:4px 10px" onclick="addCustomTF()">添加</button>
   </div>
   <div id="tf-err" style="color:var(--red);font-size:10px;display:none"></div>
+</div>
+
+<!-- ── 时间跳转弹窗 ── -->
+<div id="jumppop" style="position:fixed;z-index:1001;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;min-width:250px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:9px">
+  <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" onclick="closeJumpPop()">✕</button>
+  <h4 style="font-size:12px;font-weight:700;color:var(--text)">跳转到指定时间</h4>
+  <input id="jump-inp" type="datetime-local" class="ginp" style="flex:none;width:100%" onkeydown="if(event.key==='Enter')doJumpAll()">
+  <div style="display:flex;gap:6px">
+    <button class="gbtn" style="flex:1" onclick="doJumpAll()">全部视窗跳转</button>
+    <button class="gbtn" style="flex:1;background:var(--bg3);color:var(--text)" onclick="gotoTime(Math.floor(Date.now()/1000));closeJumpPop()">回到现在</button>
+  </div>
+  <div id="jump-err" style="color:var(--red);font-size:10px;display:none"></div>
 </div>
 
 <!-- ── BODY ROW ── -->
@@ -859,9 +872,17 @@ async function loadPanel(pi){
       // 拖到距最左20根以内时自动加载更早历史（无限回看）
       if(range&&range.from<20)loadMoreHistory(pi);
       // 🔗联动：只有鼠标所在的视窗拖动才带动别人（防止程序性平移互相触发）
+      // ★性能策略：视窗少时实时跟随；视窗多时等拖动停顿后再统一同步
+      //   <8个 → 实时(rAF)   8~11个 → 停顿400ms后   ≥12个 → 停顿1秒后
       if(syncLock&&!_syncApplying&&syncActivePi===pi){
-        if(p._syncRaf)cancelAnimationFrame(p._syncRaf);
-        p._syncRaf=requestAnimationFrame(()=>syncFromPanel(pi));
+        const n=panels.length;
+        if(n<8){
+          if(p._syncRaf)cancelAnimationFrame(p._syncRaf);
+          p._syncRaf=requestAnimationFrame(()=>syncFromPanel(pi));
+        }else{
+          clearTimeout(p._syncTimer);
+          p._syncTimer=setTimeout(()=>syncFromPanel(pi),n>=12?1000:400);
+        }
       }
     });
     // 记录鼠标当前所在视窗（作为联动的源头）
@@ -962,6 +983,54 @@ async function ensureIndDepth(pi){
 }
 // 所有视窗都补齐一遍（新增/修改大周期指标后调用）
 function ensureIndDepthAll(){panels.forEach((_,i)=>ensureIndDepth(i));}
+
+// ══════════════════════════════════════════════
+// 🕐时间跳转：所有视窗同步跳到指定时刻（不依赖锁定开关）
+// 本地数据覆盖该时刻 → 直接居中；否则远程取数跳转(jumpToTime)
+// ══════════════════════════════════════════════
+function gotoTime(t){
+  panels.forEach((p,pi)=>{
+    if(!p.chart||!p.candles?.length)return;
+    const sec=tfToSec(p.tf);
+    const first=p.candles[0].time,last=p.candles[p.candles.length-1].time;
+    if(t<first-sec||t>last+sec){jumpToTime(pi,t);return;}
+    const lr=p.chart.timeScale().getVisibleLogicalRange();
+    const span=lr?(lr.to-lr.from):200;
+    const idx=nearestIdx(p.candles,t);
+    _syncApplying=true;
+    p.chart.timeScale().setVisibleLogicalRange({from:idx-span/2,to:idx+span/2});
+    _syncApplying=false;
+    schedVPVR(pi);
+  });
+}
+function openJumpPop(anchor){
+  const pop=document.getElementById('jumppop');
+  if(pop.style.display==='flex'){closeJumpPop();return;}
+  // 默认填当前时间（datetime-local 需要 yyyy-MM-ddTHH:mm 格式的本地时间）
+  const d=new Date(Date.now()-d0ffset());
+  document.getElementById('jump-inp').value=d.toISOString().slice(0,16);
+  pop.style.display='flex';
+  const rect=anchor.getBoundingClientRect();
+  let left=rect.right-250,top=rect.bottom+4;
+  if(left<4)left=4;
+  pop.style.left=left+'px';pop.style.top=top+'px';
+}
+function d0ffset(){return new Date().getTimezoneOffset()*60000;} // 本地时区偏移(ms)
+function closeJumpPop(){document.getElementById('jumppop').style.display='none';}
+function doJumpAll(){
+  const err=document.getElementById('jump-err');
+  err.style.display='none';
+  const v=document.getElementById('jump-inp').value;
+  const t=Math.floor(new Date(v).getTime()/1000);
+  if(!v||isNaN(t)){err.textContent='时间格式无效';err.style.display='';return;}
+  if(t*1000>Date.now()){err.textContent='不能跳转到未来';err.style.display='';return;}
+  gotoTime(t);
+  closeJumpPop();
+}
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('jumppop');
+  if(pop&&pop.style.display==='flex'&&!pop.contains(e.target)&&!e.target.closest('#jump-btn'))closeJumpPop();
+});
 
 // ══════════════════════════════════════════════
 // 🔗联动锁定：拖动A视窗时，其他视窗把「A中心K线的时刻」
