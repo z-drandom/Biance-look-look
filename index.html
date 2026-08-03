@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>BTC 看盘</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
@@ -152,6 +152,41 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .pm-btn .pm-d{display:block;font-size:10px;color:var(--text2);margin-top:2px}
 .pm-btn.restore{border-color:var(--green)}
 .pm-btn.restore b{color:var(--green)}
+
+/* ═══════════════════════════════════════════════
+   移动端适配
+   ≤600px：普通手机（含折叠屏折起） → 单列视窗、精简顶栏
+   601~900px：折叠屏展开/小平板 → 保持双列，收窄导航栏
+   ═══════════════════════════════════════════════ */
+@media (max-width:900px){
+  #right-col{width:56px}
+  #mm-title{display:none}
+}
+@media (max-width:600px){
+  /* 顶栏精简：只留价格和涨跌幅，隐藏24H统计等 */
+  #hdr{gap:8px;padding:0 8px;height:38px}
+  #logo{font-size:12px}
+  #lp{font-size:16px}
+  .hst{display:none}
+  /* 指标栏允许横向滑动（标签多时不再被截断） */
+  #ind-bar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  #ind-bar::-webkit-scrollbar{height:0}
+  #sh-chips{overflow:visible;flex:0 0 auto}
+  /* 视窗改为单列 */
+  #grid{grid-template-columns:1fr}
+  /* 导航栏更窄 */
+  #right-col{width:36px}
+  .mm-blk{font-size:8px}
+  /* 触控目标加大 */
+  .vm-btn{height:20px;line-height:20px;font-size:10px}
+  .pcx{font-size:14px;padding:0 6px}
+  .row-btn,.add-ind,.ma-btn{height:24px}
+  .ptb{height:30px}
+  .chip .eye{font-size:14px;padding:2px 6px}
+  /* 弹窗不超出屏幕 */
+  #gpop,#tfpop,#jumppop{max-width:calc(100vw - 16px)}
+  .pm-box{min-width:0;width:calc(100vw - 32px)}
+}
 </style>
 </head>
 <body>
@@ -634,7 +669,12 @@ function renderSharedChips(){
     chip.dataset.id=ind.id;
     chip.innerHTML=`<span class="cl">${indLabel(ind)}</span><span class="eye" title="扫过切换显示/隐藏">👁</span><span class="cx">✕</span>`;
     chip.querySelector('.cl').onclick=e=>{e.stopPropagation();openPopEdit(ind.id,chip);};
-    chip.querySelector('.eye').addEventListener('mouseenter',e=>{e.stopPropagation();toggleIndVisible(ind.id);});
+    // 有鼠标的设备用「扫过」触发；触屏设备（无hover）改为「点按」触发
+    if(matchMedia('(hover: hover)').matches){
+      chip.querySelector('.eye').addEventListener('mouseenter',e=>{e.stopPropagation();toggleIndVisible(ind.id);});
+    }else{
+      chip.querySelector('.eye').addEventListener('click',e=>{e.stopPropagation();toggleIndVisible(ind.id);});
+    }
     chip.querySelector('.cx').onclick=e=>{e.stopPropagation();removeSharedInd(ind.id);};
     container.appendChild(chip);
   }
@@ -1375,8 +1415,10 @@ function refreshMinimap(){
     blk.className='mm-blk';
     blk.style.top=(el.offsetTop*scale+1)+'px';
     blk.style.height=Math.max(8,el.offsetHeight*scale-3)+'px';
-    blk.style.left=(pi%2===0?'3%':'52%');
-    blk.style.width='45%';
+    // 按视窗真实横向位置换算（自动兼容单列/双列布局）
+    const gw=grid.clientWidth||1;
+    blk.style.left=(el.offsetLeft/gw*94+3)+'%';
+    blk.style.width=(el.offsetWidth/gw*94-2)+'%';
     blk.textContent=p.tf;
     track.appendChild(blk);
   });
@@ -1413,6 +1455,10 @@ function updateMinimapThumb(){
   mm.addEventListener('mousedown',e=>{dragging=true;scrollToClientY(e.clientY);e.preventDefault();});
   document.addEventListener('mousemove',e=>{if(dragging)scrollToClientY(e.clientY);});
   document.addEventListener('mouseup',()=>{dragging=false;});
+  // 触屏：手指按住/滑动缩略图 = 拖动整页
+  mm.addEventListener('touchstart',e=>{dragging=true;scrollToClientY(e.touches[0].clientY);e.preventDefault();},{passive:false});
+  mm.addEventListener('touchmove',e=>{if(dragging)scrollToClientY(e.touches[0].clientY);e.preventDefault();},{passive:false});
+  mm.addEventListener('touchend',()=>{dragging=false;});
   mm.addEventListener('wheel',e=>{sw.scrollTop+=e.deltaY;e.preventDefault();},{passive:false});
   sw.addEventListener('scroll',updateMinimapThumb);
 })();
