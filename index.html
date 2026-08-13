@@ -1307,7 +1307,7 @@ function onCross(pi,param){
   if(!param.time||!p.candles)return;
   const c=p.candles.find(x=>x.time===param.time);if(!c)return;
   const el=document.getElementById(`pp-${pi}`);
-  if(el){el.textContent=`O:${fmt(c.open)} H:${fmt(c.high)} L:${fmt(c.low)} C:${fmt(c.close)}`;el.style.color=c.close>=c.open?'var(--green)':'var(--red)';el.style.fontSize='9px';}
+  if(el){el.textContent=`开:${fmt(c.open)} 高:${fmt(c.high)} 低:${fmt(c.low)} 收:${fmt(c.close)}`;el.style.color=c.close>=c.open?'var(--green)':'var(--red)';el.style.fontSize='9px';}
 }
 
 // ══════════════════════════════════════════════
