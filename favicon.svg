@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 网站小图标：深色圆角底 + 红绿K线 + 比特币橙点 -->
+  <rect width="64" height="64" rx="13" fill="#131722"/>
+  <!-- 绿色阳线 -->
+  <line x1="17" y1="12" x2="17" y2="54" stroke="#26a69a" stroke-width="3" stroke-linecap="round"/>
+  <rect x="11" y="22" width="12" height="22" rx="2.5" fill="#26a69a"/>
+  <!-- 红色阴线 -->
+  <line x1="39" y1="18" x2="39" y2="50" stroke="#ef5350" stroke-width="3" stroke-linecap="round"/>
+  <rect x="33" y="26" width="12" height="14" rx="2.5" fill="#ef5350"/>
+  <!-- 比特币橙点 -->
+  <circle cx="53" cy="15" r="7" fill="#f7931a"/>
+  <text x="53" y="19.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#fff">₿</text>
+</svg>
