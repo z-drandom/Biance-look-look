@@ -115,6 +115,8 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 /* 十字线时间标签（自绘）：跟随鼠标横向移动，贴在时间轴上
    内置标签在K线右侧空白区（未来）不显示时间，故禁用内置、全程用这个 */
 .tlab{position:absolute;bottom:2px;transform:translateX(-50%);background:#131722;color:#fff;font-size:10px;padding:2px 6px;border-radius:2px;z-index:12;pointer-events:none;white-space:nowrap;display:none}
+/* 价差标签：跟随十字线横线，显示「光标价格 − 当前市价」的差值与百分比 */
+.plab{position:absolute;transform:translateY(-50%);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:2px;z-index:12;pointer-events:none;white-space:nowrap;display:none}
 .ldg{position:absolute;inset:0;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;z-index:30;color:var(--text2);font-size:11px;gap:8px}
 .sp{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -386,6 +388,7 @@ const panels=[];                           // 每个视窗的图表对象/数据
 let userTFs=[...BINANCE_TFS];              // 用户当前可选的周期列表（可增删）
 
 // ── 联动锁定 ──
+let livePrice=null;      // 全局最新市价（顶栏ticker推送），用作价差标签的基准
 let maximizedPi=-1;      // 当前最大化的视窗序号（-1=正常网格模式），双击视窗切换
 let syncLock=false;      // 🔗锁定开关：开启后拖动任一视窗，其他视窗按中心时刻对齐
 let syncActivePi=-1;     // 鼠标当前所在的视窗序号（只有它是联动的"源头"）
@@ -882,6 +885,8 @@ async function loadPanel(pi){
     const sl=document.createElement('div');sl.className='sync-line';sl.id=`sl-${pi}`;cw.appendChild(sl);
     // 十字线的中文时间标签（跟随鼠标，未来空白区也能显示推算时间）
     const tl=document.createElement('div');tl.className='tlab';tl.id=`tlab-${pi}`;cw.appendChild(tl);
+    // 光标价格 vs 当前市价的差值标签
+    const pl=document.createElement('div');pl.className='plab';pl.id=`plab-${pi}`;cw.appendChild(pl);
     p.chart=LightweightCharts.createChart(mainDiv,{
       width:W,height:H,
       layout:{background:{type:'Solid',color:'#ffffff'},textColor:'#787b86'},
@@ -1292,6 +1297,7 @@ function onCross(pi,param){
   if(lab){
     if(!param.point||param.logical==null||!p.candles?.length){
       lab.style.display='none';           // 鼠标离开图表
+      const pl0=document.getElementById(`plab-${pi}`);if(pl0)pl0.style.display='none';
     }else{
       const sec=tfToSec(p.tf),len=p.candles.length;
       const li=Math.round(param.logical); // 鼠标所在的逻辑K线序号（可超出数据范围）
@@ -1302,6 +1308,25 @@ function onCross(pi,param){
       lab.textContent=fmtCNTime(t,sec);
       lab.style.left=param.point.x+'px';
       lab.style.display='block';
+    }
+  }
+  // ── 价差标签：光标所在价格 与 当前市价 的差值/百分比 ──
+  const plab=document.getElementById(`plab-${pi}`);
+  if(plab){
+    const cw=document.getElementById(`cw-${pi}`);
+    const mkt=livePrice||p.candles?.[p.candles.length-1]?.close;  // 当前市价
+    const cur=(param.point&&p.candleSeries)?p.candleSeries.coordinateToPrice(param.point.y):null;
+    if(cur==null||!mkt||!cw){
+      plab.style.display='none';
+    }else{
+      const diff=cur-mkt, pct=diff/mkt*100, up=diff>=0;
+      plab.textContent=`${up?'+':'-'}${fmt(Math.abs(diff))} (${up?'+':''}${pct.toFixed(2)}%)`;
+      plab.style.background=up?'var(--green)':'var(--red)';
+      plab.style.top=param.point.y+'px';
+      // 贴在右侧价格轴左边，避免遮挡轴上数字
+      const axisW=(p.chart.priceScale('right').width&&p.chart.priceScale('right').width())||65;
+      plab.style.right=(axisW+6)+'px';
+      plab.style.display='block';
     }
   }
   // ── 工具条上的OHLC显示（悬停在某根K线上时） ──
@@ -1374,6 +1399,7 @@ function startTicker(){
     ws.onmessage=evt=>{
       try{
         const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
+        livePrice=price;
         document.getElementById('lp').textContent=fmt(price);
         document.getElementById('lp').className=chg>=0?'up':'dn';
         const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
