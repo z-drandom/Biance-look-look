@@ -1,24 +1,42 @@
 # ═══════════════════════════════════════════════════════════
 # BTC 每小时振幅预警（7×24 云端运行，不需要开着网页）
 #
-# 【启用步骤】
-# 1. 准备一个推送地址（二选一，都免费）：
-#    · Server酱  → https://sct.ftqq.com  微信扫码登录拿 SendKey
-#                  地址形如 https://sctapi.ftqq.com/你的KEY.send
-#                  （在 Server酱 后台可把消息同时转发到邮箱）
-#    · Bark(iOS) → App Store 装 Bark，复制 App 内地址
-#                  地址形如 https://api.day.app/你的KEY
+# 支持两条推送通道，各自独立、可只配一个也可两个都配：
+#   ① 邮件（QQ邮箱 SMTP 直发）        → 需要 MAIL_USER / MAIL_PASS
+#   ② 微信 / iOS（Server酱、Bark 等） → 需要 ALERT_WEBHOOK
 #
-# 2. 打开仓库 Settings → Secrets and variables → Actions →
-#    New repository secret，名称填 ALERT_WEBHOOK，值粘贴上面的地址。
+# ───────────────────────────────────────────────────────────
+# 【① 配置邮件推送（推荐）】
+# 1. 拿 QQ 邮箱授权码（不是 QQ 密码）：
+#    浏览器打开 mail.qq.com → 设置 → 账号 → 往下找
+#    「POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务」
+#    → 开启「IMAP/SMTP服务」→ 按提示发短信验证
+#    → 页面会给出一串16位授权码，复制它
 #
-# 3. 打开仓库 Actions 页签启用工作流。可先点 "Run workflow" 手动测一次。
+# 2. 到仓库 Settings → Secrets and variables → Actions
+#    → New repository secret，加两条：
+#       名称 MAIL_USER   值 你的QQ邮箱，如 12345678@qq.com
+#       名称 MAIL_PASS   值 上一步的16位授权码
+#    （邮件由你自己发给你自己，所以仓库里不出现任何邮箱地址）
+#
+# ───────────────────────────────────────────────────────────
+# 【② 配置微信/手机推送（可选）】
+#    Server酱 https://sct.ftqq.com 拿 SendKey，地址形如
+#      https://sctapi.ftqq.com/你的KEY.send
+#    Bark(iOS) 地址形如 https://api.day.app/你的KEY
+#    存成 secret，名称 ALERT_WEBHOOK
+#
+# ───────────────────────────────────────────────────────────
+# 【启用与测试】
+#   仓库 Actions 页签 → 若提示启用工作流就点启用
+#   → 左侧选「BTC 振幅预警」→ 右上 Run workflow 手动跑一次
+#   手动运行时无论振幅是否超阈值都会推一条，用于验证链路
 #
 # 【调整】
-#   · 阈值：改下面 env 里的 THRESHOLD（默认 2，单位 %）
-#   · 频率：改 cron。'5 * * * *' = 每小时第5分钟跑一次
-#           （整点刚过时上一根小时K线才刚收完，所以错开5分钟）
-#   · 说明：GitHub 定时任务在高峰期可能延迟几分钟，属正常现象
+#   · 阈值：改下面 env 的 THRESHOLD（默认 2，单位 %）
+#   · 频率：改 cron，'5 * * * *' = 每小时第5分钟
+#           （整点刚过时上一根小时K线才刚收完，故错开5分钟）
+#   · 注：GitHub 定时任务在高峰期可能延迟几分钟，属正常现象
 # ═══════════════════════════════════════════════════════════
 name: BTC 振幅预警
 
@@ -34,63 +52,103 @@ jobs:
       - name: 检查上一根小时K线振幅并推送
         env:
           THRESHOLD: '2'                                # ★振幅阈值(%)
-          WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
-          FORCE: ${{ github.event_name == 'workflow_dispatch' }}   # 手动运行时无论是否超阈值都推一条，便于测试
+          MAIL_USER: ${{ secrets.MAIL_USER }}           # QQ邮箱地址
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}           # QQ邮箱授权码
+          WEBHOOK:   ${{ secrets.ALERT_WEBHOOK }}       # Server酱/Bark（可选）
+          FORCE: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           python3 - <<'PY'
-          import os, json, datetime, urllib.parse, urllib.request
-
-          hook = (os.environ.get('WEBHOOK') or '').strip()
-          if not hook:
-              print('未配置 ALERT_WEBHOOK secret，跳过。参见本文件顶部说明。')
-              raise SystemExit(0)
+          import os, ssl, json, smtplib, datetime, urllib.parse, urllib.request
+          from email.mime.text import MIMEText
+          from email.header import Header
+          from email.utils import formataddr
 
           th    = float(os.environ.get('THRESHOLD', '2'))
           force = os.environ.get('FORCE') == 'true'
+          mail_user = (os.environ.get('MAIL_USER') or '').strip()
+          mail_pass = (os.environ.get('MAIL_PASS') or '').strip()
+          hook      = (os.environ.get('WEBHOOK')   or '').strip()
 
-          # 取最近3根1小时K线，倒数第2根是刚收完的完整K线
+          if not mail_user and not hook:
+              print('未配置任何推送通道（MAIL_USER/MAIL_PASS 或 ALERT_WEBHOOK），跳过。')
+              print('配置方法见本文件顶部注释。')
+              raise SystemExit(0)
+
+          # ── 取最近3根1小时K线，倒数第2根是刚收完的完整K线 ──
           url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=3'
           with urllib.request.urlopen(url, timeout=20) as r:
               k = json.load(r)
 
           prev, cur = k[-3], k[-2]
           prev_close = float(prev[4])
-          open_ms, high, low, close = int(cur[0]), float(cur[2]), float(cur[3]), float(cur[4])
-          base = prev_close or float(cur[1]) or 1.0
+          open_ms = int(cur[0])
+          o, high, low, close = float(cur[1]), float(cur[2]), float(cur[3]), float(cur[4])
+          base = prev_close or o or 1.0
 
           amp = (high - low) / base * 100          # 振幅% =(最高-最低)/前收
           chg = (close - prev_close) / base * 100  # 涨跌% =(收盘-前收)/前收
-          print(f'上一小时振幅 {amp:.2f}%  阈值 {th}%')
+          print(f'上一小时振幅 {amp:.2f}%   阈值 {th}%')
 
           if amp < th and not force:
               print('未超阈值，无需提醒。')
               raise SystemExit(0)
 
-          # 北京时间 = UTC+8
           t = datetime.datetime.utcfromtimestamp(open_ms / 1000) + datetime.timedelta(hours=8)
+          hour_cn = f'{t:%m月%d日 %H:00}'
           title = f'⚠️ BTC振幅预警 {amp:.2f}%'
-          msg = (f"BTC {t:%m月%d日 %H:00}（北京时间）振幅 {amp:.2f}%，阈值 {th}%\n"
-                 f"最高 {high:,.0f}   最低 {low:,.0f}\n"
-                 f"收盘 {close:,.0f}   涨跌 {chg:+.2f}%")
+          body = (f"BTC {hour_cn}（北京时间）这根小时K线\n\n"
+                  f"振幅　{amp:.2f}%   （阈值 {th}%）\n"
+                  f"涨跌　{chg:+.2f}%\n\n"
+                  f"开盘　{o:,.0f}\n"
+                  f"最高　{high:,.0f}\n"
+                  f"最低　{low:,.0f}\n"
+                  f"收盘　{close:,.0f}\n\n"
+                  f"看盘台：https://z-drandom.github.io/Biance-look-look/")
           if amp < th:
-              msg = '【手动测试】\n' + msg
-          print(msg)
+              title = '【手动测试】' + title
+              body  = '【手动测试：本次振幅未超阈值，仅用于验证推送链路】\n\n' + body
 
-          # 按推送服务类型组装请求
-          try:
-              if 'ftqq.com' in hook:                       # Server酱（可转微信/邮箱）
-                  data = urllib.parse.urlencode({'title': title, 'desp': msg}).encode()
-                  req = urllib.request.Request(hook, data=data)
-              elif 'pushplus' in hook:                     # PushPlus
-                  data = urllib.parse.urlencode({'title': title, 'content': msg}).encode()
-                  req = urllib.request.Request(hook, data=data)
-              else:                                        # Bark：<地址>/<标题>/<内容>
-                  full = (hook.rstrip('/') + '/' +
-                          urllib.parse.quote(title) + '/' + urllib.parse.quote(msg))
-                  req = urllib.request.Request(full)
-              with urllib.request.urlopen(req, timeout=20) as resp:
-                  print('推送完成，服务端返回：', resp.status, resp.read()[:200].decode('utf-8', 'ignore'))
-          except Exception as e:
-              print('推送失败：', e)
+          ok, fail = [], []
+
+          # ── 通道①：QQ邮箱 SMTP 直发（发给自己）──
+          if mail_user and mail_pass:
+              try:
+                  msg = MIMEText(body, 'plain', 'utf-8')
+                  msg['Subject'] = Header(title, 'utf-8')
+                  msg['From'] = formataddr((str(Header('BTC看盘台', 'utf-8')), mail_user))
+                  msg['To']   = mail_user
+                  ctx = ssl.create_default_context()
+                  with smtplib.SMTP_SSL('smtp.qq.com', 465, context=ctx, timeout=25) as s:
+                      s.login(mail_user, mail_pass)
+                      s.sendmail(mail_user, [mail_user], msg.as_string())
+                  ok.append('邮件')
+              except Exception as e:
+                  fail.append(f'邮件({type(e).__name__}: {e})')
+          elif mail_user or mail_pass:
+              fail.append('邮件(MAIL_USER 与 MAIL_PASS 需同时配置)')
+
+          # ── 通道②：webhook（Server酱 / PushPlus / Bark）──
+          if hook:
+              try:
+                  if 'ftqq.com' in hook:
+                      data = urllib.parse.urlencode({'title': title, 'desp': body}).encode()
+                      req = urllib.request.Request(hook, data=data)
+                  elif 'pushplus' in hook:
+                      data = urllib.parse.urlencode({'title': title, 'content': body}).encode()
+                      req = urllib.request.Request(hook, data=data)
+                  else:  # Bark：<地址>/<标题>/<内容>
+                      full = (hook.rstrip('/') + '/' +
+                              urllib.parse.quote(title) + '/' + urllib.parse.quote(body))
+                      req = urllib.request.Request(full)
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      print('webhook 返回：', resp.status,
+                            resp.read()[:200].decode('utf-8', 'ignore'))
+                  ok.append('webhook')
+              except Exception as e:
+                  fail.append(f'webhook({type(e).__name__}: {e})')
+
+          print('推送成功：', '、'.join(ok) or '无')
+          if fail:
+              print('推送失败：', '；'.join(fail))
               raise SystemExit(1)
           PY
