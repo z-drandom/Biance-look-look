@@ -222,6 +222,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div class="isep"></div>
   <button class="row-btn" id="sync-btn" onclick="toggleSyncLock()" title="锁定后：拖动任一视窗，其他视窗自动以相同时刻K线对齐到各自中心">🔗锁定</button>
   <button class="row-btn" id="jump-btn" onclick="openJumpPop(this)" title="输入时间，所有视窗同步跳转到该历史时刻">🕐跳转</button>
+  <button class="row-btn" id="alert-btn" onclick="openAlertPop(this)" title="振幅预警设置">🔔预警</button>
   <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
 </div>
 
@@ -248,6 +249,35 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
     <button class="gbtn" style="flex:1;background:var(--bg3);color:var(--text)" onclick="gotoTime(Math.floor(Date.now()/1000));closeJumpPop()">回到现在</button>
   </div>
   <div id="jump-err" style="color:var(--red);font-size:10px;display:none"></div>
+</div>
+
+<!-- ── 振幅预警设置弹窗 ── -->
+<div id="alertpop" style="position:fixed;z-index:1001;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;min-width:300px;max-width:calc(100vw - 16px);box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:9px">
+  <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" onclick="closeAlertPop()">✕</button>
+  <h4 style="font-size:12px;font-weight:700;color:var(--text)">振幅预警</h4>
+
+  <label class="grow" style="cursor:pointer">
+    <input type="checkbox" id="al-on" style="accent-color:var(--blue)">
+    <span style="font-size:11px">开启监控（每小时K线）</span>
+  </label>
+
+  <div class="grow">
+    <span class="gl">阈值 %</span>
+    <input class="ginp" id="al-th" type="number" min="0.1" step="0.1" value="2">
+  </div>
+
+  <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+    <span style="font-size:11px;color:var(--text2);font-weight:700">推送到手机 / 邮箱（可选）</span>
+    <input class="ginp" id="al-hook" style="flex:none;width:100%" placeholder="粘贴 Bark / Server酱 / PushPlus 推送地址">
+    <span style="font-size:9px;color:var(--text2);line-height:1.5">
+      Bark：https://api.day.app/你的KEY<br>
+      Server酱（转微信/邮箱）：https://sctapi.ftqq.com/你的KEY.send<br>
+      其他 webhook 可用 <b>{msg}</b> 占位符自定义
+    </span>
+    <button class="gbtn" style="padding:4px 10px" onclick="testAlertHook()">发送测试推送</button>
+  </div>
+
+  <div id="al-status" style="font-size:10px;color:var(--text2)"></div>
 </div>
 
 <!-- ── BODY ROW ── -->
@@ -932,7 +962,14 @@ async function loadPanel(pi){
       }
     });
     // 记录鼠标当前所在视窗（作为联动的源头）
-    cw.addEventListener('mouseenter',()=>{syncActivePi=pi;});
+    cw.addEventListener('mouseenter',()=>{syncActivePi=pi;p.hovering=true;});
+    // 鼠标真正移出视窗才隐藏标签并恢复常规价格显示
+    cw.addEventListener('mouseleave',()=>{
+      p.hovering=false;
+      document.getElementById(`tlab-${pi}`)?.style.setProperty('display','none');
+      document.getElementById(`plab-${pi}`)?.style.setProperty('display','none');
+      updatePP(pi);
+    });
     p.seriesMap={};
     drawAllInds(pi);
     p.chart.subscribeCrosshairMove(param=>onCross(pi,param));
@@ -1287,8 +1324,9 @@ function commitPop(){
 function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);refreshMinimap();saveSettings();}
 function updatePP(pi){
   const p=panels[pi];const last=p.candles?.[p.candles.length-1];if(!last)return;
+  if(p.hovering)return;   // ★鼠标悬停时不回写，避免每秒推送把K线信息刷掉（闪烁）
   const el=document.getElementById(`pp-${pi}`);
-  if(el){el.textContent=fmt(last.close);el.style.color=last.close>=last.open?'var(--green)':'var(--red)';}
+  if(el){el.textContent=fmt(last.close);el.style.color=last.close>=last.open?'var(--green)':'var(--red)';el.style.fontSize='10px';}
 }
 function onCross(pi,param){
   const p=panels[pi];
@@ -1296,8 +1334,8 @@ function onCross(pi,param){
   const lab=document.getElementById(`tlab-${pi}`);
   if(lab){
     if(!param.point||param.logical==null||!p.candles?.length){
-      lab.style.display='none';           // 鼠标离开图表
-      const pl0=document.getElementById(`plab-${pi}`);if(pl0)pl0.style.display='none';
+      // 光标短暂无坐标（如跨越K线间隙）时保持上次内容不动，
+      // 真正的隐藏交给 cw 的 mouseleave 处理，避免闪烁
     }else{
       const sec=tfToSec(p.tf),len=p.candles.length;
       const li=Math.round(param.logical); // 鼠标所在的逻辑K线序号（可超出数据范围）
@@ -1330,7 +1368,7 @@ function onCross(pi,param){
     }
   }
   // ── 工具条上的OHLC显示（悬停在某根K线上时） ──
-  if(!param.time||!p.candles)return;
+  if(!param.time||!p.candles)return;   // 无有效K线时保留上次信息，不清空
   const ci=p.candles.findIndex(x=>x.time===param.time);if(ci<0)return;
   const c=p.candles[ci];
   // 前收盘价：有上一根K线用它的收盘，否则退回本根开盘价
@@ -1599,6 +1637,107 @@ function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
 // ══════════════════════════════════════════════
+// 🔔振幅预警
+// 每分钟拉取最近2根1小时K线，算当前小时振幅=(最高-最低)/前收×100%
+// 超过阈值 → 浏览器通知 + 声音 + 可选webhook推送到手机/邮箱
+// 同一根K线只提醒一次
+//
+// ⚠️ 页面内监控只在本页开着时生效。要真正 7×24 无人值守推送，
+//    仓库里的 .github/workflows/btc-alert.yml 用 GitHub Actions
+//    每小时在云端跑一次，配置好 secret 即可（详见该文件注释）。
+// ══════════════════════════════════════════════
+const AL_KEY='btcll_alert_cfg';
+let alertCfg={on:false,th:2,hook:''};
+let _alertedBar=null;   // 已提醒过的K线开盘时间，防重复
+
+function loadAlertCfg(){
+  try{const c=JSON.parse(localStorage.getItem(AL_KEY));if(c)alertCfg={...alertCfg,...c};}catch(_){}
+}
+function saveAlertCfg(){
+  alertCfg.on=document.getElementById('al-on').checked;
+  alertCfg.th=parseFloat(document.getElementById('al-th').value)||2;
+  alertCfg.hook=document.getElementById('al-hook').value.trim();
+  try{localStorage.setItem(AL_KEY,JSON.stringify(alertCfg));}catch(_){}
+  document.getElementById('alert-btn')?.classList.toggle('on',alertCfg.on);
+  if(alertCfg.on&&'Notification'in window&&Notification.permission==='default')Notification.requestPermission();
+}
+function openAlertPop(anchor){
+  const pop=document.getElementById('alertpop');
+  if(pop.style.display==='flex'){closeAlertPop();return;}
+  document.getElementById('al-on').checked=alertCfg.on;
+  document.getElementById('al-th').value=alertCfg.th;
+  document.getElementById('al-hook').value=alertCfg.hook;
+  pop.style.display='flex';
+  const rect=anchor.getBoundingClientRect();
+  let left=Math.max(4,rect.right-300),top=rect.bottom+4;
+  pop.style.left=left+'px';pop.style.top=top+'px';
+}
+function closeAlertPop(){saveAlertCfg();document.getElementById('alertpop').style.display='none';}
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('alertpop');
+  if(pop&&pop.style.display==='flex'&&!pop.contains(e.target)&&!e.target.closest('#alert-btn'))closeAlertPop();
+});
+
+// 推送到 webhook（Bark / Server酱 / 自定义）
+function pushHook(msg){
+  const url=(alertCfg.hook||'').trim();
+  if(!url)return;
+  let full;
+  if(url.includes('{msg}'))      full=url.replace('{msg}',encodeURIComponent(msg));
+  else if(url.includes('ftqq.com'))  full=`${url}?title=${encodeURIComponent('BTC振幅预警')}&desp=${encodeURIComponent(msg)}`;
+  else if(url.includes('pushplus'))  full=`${url}${url.includes('?')?'&':'?'}title=${encodeURIComponent('BTC振幅预警')}&content=${encodeURIComponent(msg)}`;
+  else                           full=`${url.replace(/\/$/,'')}/${encodeURIComponent('BTC振幅预警')}/${encodeURIComponent(msg)}`; // Bark格式
+  // 公共推送服务多不带CORS头，用 no-cors 发出去即可（无法读返回值）
+  fetch(full,{mode:'no-cors'}).catch(()=>{});
+}
+function testAlertHook(){
+  saveAlertCfg();
+  const st=document.getElementById('al-status');
+  if(!alertCfg.hook){st.textContent='请先填写推送地址';return;}
+  pushHook('这是一条测试推送，说明配置成功 ✅');
+  st.textContent='已发出测试推送，请查看手机/微信/邮箱（若未收到请检查地址）';
+}
+function notify(title,msg){
+  try{
+    if('Notification'in window&&Notification.permission==='granted')new Notification(title,{body:msg,icon:'favicon.svg'});
+  }catch(_){}
+  try{ // 提示音（无需音频文件，用WebAudio合成两声"叮"）
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(AC){const ac=new AC();
+      [0,0.25].forEach(d=>{const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g);g.connect(ac.destination);o.frequency.value=880;
+        g.gain.setValueAtTime(.001,ac.currentTime+d);
+        g.gain.exponentialRampToValueAtTime(.25,ac.currentTime+d+.02);
+        g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d+.2);
+        o.start(ac.currentTime+d);o.stop(ac.currentTime+d+.22);});
+    }
+  }catch(_){}
+}
+// 每分钟检查一次当前小时振幅
+async function checkAmplitude(){
+  if(!alertCfg.on)return;
+  try{
+    const r=await fetch(`${REST}/klines?symbol=${SYM}&interval=1h&limit=2`);
+    const d=await r.json();
+    if(!Array.isArray(d)||d.length<2)return;
+    const prevClose=+d[0][4], cur=d[1];
+    const openT=cur[0], high=+cur[2], low=+cur[3], close=+cur[4];
+    const base=prevClose||+cur[1]||1;
+    const amp=(high-low)/base*100;
+    const st=document.getElementById('al-status');
+    if(st&&document.getElementById('alertpop').style.display==='flex')
+      st.textContent=`当前小时振幅 ${amp.toFixed(2)}%（阈值 ${alertCfg.th}%）`;
+    if(amp>=alertCfg.th&&_alertedBar!==openT){
+      _alertedBar=openT;
+      const chg=(close-prevClose)/base*100;
+      const msg=`BTC 本小时振幅 ${amp.toFixed(2)}%（阈值${alertCfg.th}%）\n最高 ${fmt(high)} 最低 ${fmt(low)} 现价 ${fmt(close)}\n涨跌 ${chg>=0?'+':''}${chg.toFixed(2)}%`;
+      notify('⚠️ BTC 振幅预警',msg);
+      pushHook(msg);
+    }
+  }catch(_){}
+}
+
+// ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
 function bootCommon(){
@@ -1606,6 +1745,9 @@ function bootCommon(){
   startTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>panels.forEach((_,i)=>schedVPVR(i)),600);
+  loadAlertCfg();
+  document.getElementById('alert-btn')?.classList.toggle('on',alertCfg.on);
+  checkAmplitude();setInterval(checkAmplitude,60000);   // ★每60秒检查一次振幅
 }
 
 function init(){
