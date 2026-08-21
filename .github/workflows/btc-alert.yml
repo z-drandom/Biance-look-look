@@ -136,7 +136,9 @@ jobs:
               print('未超阈值，无需提醒。')
               raise SystemExit(0)
 
-          t = datetime.datetime.utcfromtimestamp(open_ms / 1000) + datetime.timedelta(hours=8)
+          # 北京时间 = UTC+8
+          t = (datetime.datetime.fromtimestamp(open_ms / 1000, datetime.timezone.utc)
+               + datetime.timedelta(hours=8))
           hour_cn = f'{t:%m月%d日 %H:00}'
           title = f'⚠️ BTC振幅预警 {amp:.2f}%'
           body = (f"BTC {hour_cn}（北京时间）这根小时K线\n\n"
