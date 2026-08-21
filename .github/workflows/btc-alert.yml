@@ -74,15 +74,58 @@ jobs:
               print('配置方法见本文件顶部注释。')
               raise SystemExit(0)
 
-          # ── 取最近3根1小时K线，倒数第2根是刚收完的完整K线 ──
-          url = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=3'
-          with urllib.request.urlopen(url, timeout=20) as r:
-              k = json.load(r)
+          # ── 取行情数据 ──
+          # 注意：GitHub Actions 的服务器在美国，api.binance.com 会返回
+          # HTTP 451（地域封锁）。这里优先用币安官方公开数据镜像
+          # data-api.binance.vision（专供公共行情，不限地域），
+          # 并准备 OKX / Coinbase 两个备用源，任一可用即可。
+          def fetch_json(u, timeout=20):
+              req = urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=timeout) as r:
+                  return json.load(r)
 
+          def get_klines():
+              """返回最近3根1小时K线 [(开盘毫秒, 开, 高, 低, 收), ...]，时间从旧到新"""
+              errs = []
+              # ① 币安系（镜像优先）
+              for host in ('https://data-api.binance.vision',
+                           'https://api.binance.com'):
+                  try:
+                      d = fetch_json(f'{host}/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=3')
+                      return [(int(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]))
+                              for x in d], host
+                  except Exception as e:
+                      errs.append(f'{host} → {type(e).__name__}: {e}')
+              # ② OKX 兜底（返回新→旧，需反转）
+              try:
+                  d = fetch_json('https://www.okx.com/api/v5/market/candles'
+                                 '?instId=BTC-USDT&bar=1H&limit=3')
+                  rows = list(reversed(d['data']))
+                  return [(int(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]))
+                          for x in rows], 'okx'
+              except Exception as e:
+                  errs.append(f'okx → {type(e).__name__}: {e}')
+              # ③ Coinbase 兜底（新→旧，秒级时间，字段序 time,low,high,open,close,volume）
+              try:
+                  d = fetch_json('https://api.exchange.coinbase.com/products/'
+                                 'BTC-USDT/candles?granularity=3600')
+                  rows = list(reversed(d[:3]))
+                  return [(int(x[0]) * 1000, float(x[3]), float(x[2]), float(x[1]), float(x[4]))
+                          for x in rows], 'coinbase'
+              except Exception as e:
+                  errs.append(f'coinbase → {type(e).__name__}: {e}')
+              raise RuntimeError('所有行情源均不可用：\n  ' + '\n  '.join(errs))
+
+          k, src = get_klines()
+          print('行情来源：', src)
+          if len(k) < 3:
+              print('返回的K线不足3根，跳过本次。')
+              raise SystemExit(0)
+
+          # 倒数第1根是进行中的当前小时，倒数第2根才是刚收完的完整K线
           prev, cur = k[-3], k[-2]
-          prev_close = float(prev[4])
-          open_ms = int(cur[0])
-          o, high, low, close = float(cur[1]), float(cur[2]), float(cur[3]), float(cur[4])
+          prev_close = prev[4]
+          open_ms, o, high, low, close = cur[0], cur[1], cur[2], cur[3], cur[4]
           base = prev_close or o or 1.0
 
           amp = (high - low) / base * 100          # 振幅% =(最高-最低)/前收
