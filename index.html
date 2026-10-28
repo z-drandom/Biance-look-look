@@ -156,6 +156,74 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .pm-btn.restore{border-color:var(--green)}
 .pm-btn.restore b{color:var(--green)}
 
+/* ── ⚡ 周期力场抽屉（右侧，默认关闭，宽度可拖） ── */
+#ff-drawer{width:340px;flex-shrink:0;background:#f7f9fc;border-left:1px solid var(--border);display:none;flex-direction:column;overflow:hidden;position:relative}
+#ff-drawer.show{display:flex}
+#ff-handle{position:absolute;left:-3px;top:0;width:6px;height:100%;cursor:col-resize;z-index:20}
+#ff-handle:hover{background:var(--blue)}
+#ff-hd{height:30px;flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;padding:0 10px}
+#ff-hd .ff-t{font-size:12px;font-weight:700}
+#ff-hd .ff-meta{font-size:9px;color:var(--text2)}
+#ff-hd .ff-ic{margin-left:auto;cursor:pointer;color:var(--text2);font-size:12px}
+#ff-hd .ff-ic:hover{color:var(--text)}
+#ff-body{flex:1;overflow-y:auto;min-height:0}
+#ff-body::-webkit-scrollbar{width:4px}
+#ff-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+#ff-ladder{padding:9px 10px 6px;display:flex;flex-direction:column;gap:4px}
+.ff-sec{font-size:9px;font-weight:700;letter-spacing:.5px}
+.ff-row{display:flex;align-items:center;gap:6px}
+.ff-row.zone{border-radius:3px;padding:3px 2px;margin:0 -2px}
+.ff-row.zone.res{background:rgba(239,83,80,.10)}
+.ff-row.zone.sup{background:rgba(38,166,154,.12)}
+.ff-d{width:46px;text-align:right;font-size:10px;color:var(--text2);font-variant-numeric:tabular-nums;flex-shrink:0}
+.ff-row.zone .ff-d{font-weight:700}
+.ff-bw{flex:1;min-width:0;display:flex}
+.ff-bar{height:11px;border-radius:2px;min-width:2px}
+.ff-row.zone .ff-bar{height:15px}
+.ff-lb{width:74px;flex-shrink:0;font-size:9px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ff-row.zone .ff-lb{font-weight:700}
+.ff-now{display:flex;align-items:center;gap:6px;margin:3px 0}
+.ff-now .ff-line{flex:1;height:2px;background:var(--text)}
+.ff-now .ff-px{font-size:10px;font-weight:700;white-space:nowrap}
+#ff-rank{border-top:1px solid var(--border);padding:8px 10px 10px;display:flex;flex-direction:column;gap:5px}
+.ff-rk{display:flex;align-items:center;gap:5px}
+.ff-rk .tfb{font-size:9px;font-weight:700;background:var(--bg3);border-radius:2px;padding:1px 4px;min-width:28px;text-align:center;flex-shrink:0}
+.ff-rk .sw{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.ff-rk .nm{font-size:10px;white-space:nowrap}
+.ff-rk .vl{font-size:9px;color:var(--text2);font-variant-numeric:tabular-nums}
+.ff-rk .sc{margin-left:auto;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.ff-empty{padding:18px 12px;font-size:11px;color:var(--text2);text-align:center;line-height:1.7}
+
+/* ── 力场设置弹窗（含拖动排序的周期权重表） ── */
+#ffpop{position:fixed;z-index:1002;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;width:310px;max-width:calc(100vw - 16px);max-height:76vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:9px}
+#ffpop h4{font-size:12px;font-weight:700;color:var(--text)}
+.ffp-sec{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.4px;margin-top:2px}
+.ffp-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
+.ffp-row .lb{width:82px;flex-shrink:0}
+.ffp-row input[type=range]{flex:1;accent-color:var(--blue);min-width:0}
+.ffp-row .vv{width:42px;text-align:right;font-size:11px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.ffp-presets{display:flex;gap:4px}
+.ffp-presets button{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:10px;padding:4px 2px;cursor:pointer}
+.ffp-presets button:hover{border-color:var(--blue);color:var(--blue)}
+.ffp-presets button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+#ff-wlist{display:flex;flex-direction:column;gap:3px;max-height:240px;overflow-y:auto;padding-right:2px}
+.ffw{display:flex;align-items:center;gap:7px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 7px;touch-action:none}
+.ffw.drag{opacity:.45;border-style:dashed;border-color:var(--blue)}
+.ffw .gr{cursor:grab;color:#9aa0ab;font-size:11px;flex-shrink:0;user-select:none}
+.ffw .tf{font-size:11px;font-weight:700;width:30px;flex-shrink:0}
+.ffw input[type=range]{flex:1;accent-color:var(--blue);min-width:0;height:4px}
+.ffw .wv{width:26px;text-align:right;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.ffp-btns{display:flex;gap:6px}
+.ffp-btns button{flex:1;border-radius:3px;font-size:11px;padding:5px 4px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.ffp-btns button.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.ffp-chk{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text);cursor:pointer}
+.ffp-chk input{accent-color:var(--blue)}
+
+@media (max-width:600px){
+  #ff-drawer{width:100%;position:absolute;inset:0;z-index:40}
+  #ff-handle{display:none}
+}
+
 /* ═══════════════════════════════════════════════
    移动端适配
    ≤600px：普通手机（含折叠屏折起） → 单列视窗、精简顶栏
@@ -223,6 +291,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <button class="row-btn" id="sync-btn" onclick="toggleSyncLock()" title="锁定后：拖动任一视窗，其他视窗自动以相同时刻K线对齐到各自中心">🔗锁定</button>
   <button class="row-btn" id="jump-btn" onclick="openJumpPop(this)" title="输入时间，所有视窗同步跳转到该历史时刻">🕐跳转</button>
   <button class="row-btn" id="alert-btn" onclick="openAlertPop(this)" title="振幅预警设置">🔔预警</button>
+  <button class="row-btn" id="ff-btn" onclick="toggleFF()" title="周期力场：统计全部16个周期的均线支撑/压力">⚡力场</button>
   <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
 </div>
 
@@ -280,11 +349,74 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <div id="al-status" style="font-size:10px;color:var(--text2)"></div>
 </div>
 
+<!-- ── ⚡ 力场设置弹窗 ── -->
+<div id="ffpop">
+  <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" onclick="closeFFPop()">✕</button>
+  <h4>力场参数</h4>
+
+  <div class="ffp-sec">权重预设</div>
+  <div class="ffp-presets" id="ff-presets">
+    <button data-k="scalp" onclick="ffApplyPreset('scalp')">短线高频</button>
+    <button data-k="swing" onclick="ffApplyPreset('swing')">36小时波段</button>
+    <button data-k="hold"  onclick="ffApplyPreset('hold')">长线持有</button>
+  </div>
+
+  <div class="ffp-sec">全局参数</div>
+  <div class="ffp-row">
+    <span class="lb">持仓时长</span>
+    <input type="range" id="ff-hours" min="1" max="336" step="1" oninput="ffSetHours(this.value)">
+    <span class="vv" id="ff-hours-v">36h</span>
+  </div>
+  <label class="ffp-chk"><input type="checkbox" id="ff-sauto" onchange="ffSetSigmaAuto(this.checked)"><span>σ 半权距离：按持仓时长自动推导</span></label>
+  <div class="ffp-row">
+    <span class="lb">σ 半权距离</span>
+    <input type="range" id="ff-sigma" min="2" max="300" step="1" oninput="ffSetSigma(this.value)">
+    <span class="vv" id="ff-sigma-v">3.0%</span>
+  </div>
+  <div class="ffp-row">
+    <span class="lb">α 参数权重</span>
+    <input type="range" id="ff-alpha" min="0" max="150" step="5" oninput="ffSetAlpha(this.value)">
+    <span class="vv" id="ff-alpha-v">0.70</span>
+  </div>
+  <div class="ffp-row">
+    <span class="lb">共振箱宽</span>
+    <input type="range" id="ff-bin" min="2" max="150" step="1" oninput="ffSetBin(this.value)">
+    <span class="vv" id="ff-bin-v">0.20%</span>
+  </div>
+  <div style="display:flex;gap:14px">
+    <label class="ffp-chk"><input type="checkbox" id="ff-utema" onchange="ffSetUse('useTema',this.checked)"><span>统计 TEMA</span></label>
+    <label class="ffp-chk"><input type="checkbox" id="ff-uma" onchange="ffSetUse('useMa',this.checked)"><span>统计 MA</span></label>
+  </div>
+
+  <div class="ffp-sec">周期权重 · 按住 ⣿ 拖动排序</div>
+  <div id="ff-wlist"></div>
+  <div class="ffp-btns">
+    <button onclick="ffAutoWeights()">按顺序分配权重</button>
+    <button class="pri" onclick="closeFFPop()">完成</button>
+  </div>
+</div>
+
 <!-- ── BODY ROW ── -->
 <div id="body-row">
   <!-- 左：图表滚动区 -->
   <div id="scroll-wrap">
     <div id="grid"></div>
+  </div>
+
+
+  <!-- ⚡ 周期力场抽屉 -->
+  <div id="ff-drawer">
+    <div id="ff-handle"></div>
+    <div id="ff-hd">
+      <span class="ff-t">⚡ 周期力场</span>
+      <span class="ff-meta" id="ff-meta">加载中…</span>
+      <span class="ff-ic" onclick="openFFPop(this)" title="设置">⚙</span>
+      <span class="ff-ic" style="margin-left:0" onclick="toggleFF()" title="关闭">✕</span>
+    </div>
+    <div id="ff-body">
+      <div id="ff-ladder"></div>
+      <div id="ff-rank"></div>
+    </div>
   </div>
 
   <!-- 右：缩略导航栏 -->
@@ -718,6 +850,7 @@ function removeSharedInd(id){
   renderSharedChips();
   redrawAllPanels();
   saveSettings();
+  ffRecomputeLines();ffRender();
 }
 
 // ══════════════════════════════════════════════
@@ -1315,7 +1448,7 @@ function commitPop(){
       if(ind.type==='vpvr'){ind.rows=rows;ind.width=width;}
     }
   }
-  renderSharedChips();redrawAllPanels();closePop();saveSettings();ensureIndDepthAll();
+  renderSharedChips();redrawAllPanels();closePop();saveSettings();ensureIndDepthAll();ffRecomputeLines();ffRender();
 }
 
 // ══════════════════════════════════════════════
@@ -1438,6 +1571,7 @@ function startTicker(){
       try{
         const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
         livePrice=price;
+        ffScheduleRender();
         document.getElementById('lp').textContent=fmt(price);
         document.getElementById('lp').className=chg>=0?'up':'dn';
         const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
@@ -1737,6 +1871,405 @@ async function checkAmplitude(){
   }catch(_){}
 }
 
+
+// ══════════════════════════════════════════════
+// ⚡ 周期力场
+// 统计【全部16个周期】×【顶栏当前的均线参数】×【TEMA, MA】的
+// 均线此刻位置，按三项权重算出它对现价的支撑/压力强度，
+// 再把相近价位的线合并成「共振区」。
+//
+//   力量分 = W周期 × W参数 × W距离 × 100
+//     W周期 = 用户设定(0~100)/100      ← 弹窗里可拖动排序 + 逐个微调
+//     W参数 = (参数/最大参数)^α        α默认0.7，均线参数越大越重
+//     W距离 = 1/(1+(d/σ)²)            柯西衰减：平滑、永不归零、无截断
+//                                      d=距现价百分比；σ=半权距离
+//                                      （距离恰为σ时权重正好砍半）
+//     TEMA 与 MA 平级，不加区分系数
+//
+//   σ 默认由「持仓时长」自动推导 = 过去约120个该时长窗口内
+//     BTC 涨跌幅绝对值的中位数，市况变化时自动跟随（可手动锁定）
+//
+// 性能：均线值每3分钟重算一次（错峰拉取16个周期各2000根K线并缓存），
+//       距离与分数跟着实时价刷新（仅几百次简单运算，几乎零成本）。
+// ══════════════════════════════════════════════
+const FF_KEY='btcll_ff_v1';
+const FF_TFS=[...BINANCE_TFS];          // 全部16个周期，不限于已打开的视窗
+const FF_FETCH_MS=180000;               // ★均线值重算间隔(ms)
+const FF_STAGGER_MS=260;                // ★各周期错峰拉取间隔(ms)
+
+// 三套权重预设（数值=该周期权重 0~100）
+const FF_PRESETS={
+  scalp:{name:'短线高频',hours:1,
+    w:{'1s':35,'1m':80,'3m':92,'5m':100,'15m':100,'30m':88,'1h':75,'2h':55,'4h':40,'6h':32,'8h':28,'12h':25,'1d':18,'3d':10,'1w':6,'1M':3}},
+  swing:{name:'36小时波段',hours:36,
+    w:{'1s':2,'1m':7,'3m':12,'5m':18,'15m':35,'30m':55,'1h':85,'2h':95,'4h':100,'6h':88,'8h':78,'12h':92,'1d':80,'3d':50,'1w':32,'1M':15}},
+  hold:{name:'长线持有',hours:168,
+    w:{'1s':1,'1m':2,'3m':3,'5m':4,'15m':7,'30m':12,'1h':22,'2h':30,'4h':50,'6h':58,'8h':60,'12h':85,'1d':100,'3d':100,'1w':95,'1M':80}},
+};
+
+let ffCfg={
+  open:false, width:340, preset:'swing', hours:36,
+  sigmaAuto:true, sigma:3.0, alpha:0.7, bin:0.2,
+  useTema:true, useMa:true,
+  weights:{...FF_PRESETS.swing.w},
+  order:[...FF_TFS],
+};
+let ffData={};        // tf -> {closes:[...], at}
+let ffLines=[];       // 算好的均线位置（每3分钟刷新）
+let ffSigma=3.0;
+let _ffRenderT=0, _ffRecalcTimer=null;
+
+// ── 配置读写 ──
+function ffLoadCfg(){
+  try{const c=JSON.parse(localStorage.getItem(FF_KEY));
+    if(c)ffCfg={...ffCfg,...c,weights:{...ffCfg.weights,...(c.weights||{})}};
+  }catch(_){}
+  if(!Array.isArray(ffCfg.order)||ffCfg.order.length!==FF_TFS.length)ffSortOrder();
+}
+function ffSaveCfg(){try{localStorage.setItem(FF_KEY,JSON.stringify(ffCfg));}catch(_){}}
+function ffSortOrder(){ffCfg.order=[...FF_TFS].sort((a,b)=>(ffCfg.weights[b]||0)-(ffCfg.weights[a]||0));}
+
+// ── 抽屉开关 ──
+function toggleFF(){
+  ffCfg.open=!ffCfg.open;
+  document.getElementById('ff-drawer')?.classList.toggle('show',ffCfg.open);
+  document.getElementById('ff-btn')?.classList.toggle('on',ffCfg.open);
+  ffSaveCfg();resizeAll();
+  if(ffCfg.open)ffRender();
+}
+
+// ── 数据拉取（每个周期 2000 根收盘价）──
+async function ffFetchTF(tf){
+  try{
+    const r1=await fetch(`${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000`);
+    const d1=await r1.json();
+    if(!Array.isArray(d1)||!d1.length)return;
+    let closes=d1.map(k=>+k[4]);
+    try{
+      const r2=await fetch(`${REST}/klines?symbol=${SYM}&interval=${tf}&limit=1000&endTime=${d1[0][0]-1}`);
+      const d2=await r2.json();
+      if(Array.isArray(d2)&&d2.length)closes=[...d2.map(k=>+k[4]),...closes];
+    }catch(_){}
+    ffData[tf]={closes,at:Date.now()};
+    ffScheduleRecalc();
+  }catch(_){}
+}
+function ffLoadAll(){
+  FF_TFS.forEach((tf,i)=>setTimeout(()=>ffFetchTF(tf),i*FF_STAGGER_MS));
+}
+function ffScheduleRecalc(){
+  clearTimeout(_ffRecalcTimer);
+  _ffRecalcTimer=setTimeout(()=>{ffSigma=ffCalcSigma();ffRecomputeLines();ffRender();},400);
+}
+
+// ── σ：由持仓时长推导（1h收盘价滚动窗口涨跌幅的中位数）──
+function ffCalcSigma(){
+  if(!ffCfg.sigmaAuto)return ffCfg.sigma;
+  const h=ffData['1h'];
+  if(!h||h.closes.length<60)return ffCfg.sigma;
+  const cs=h.closes, n=Math.max(1,Math.round(ffCfg.hours));
+  const rets=[];
+  for(let i=cs.length-1;i-n>=0&&rets.length<120;i--){
+    const a=cs[i-n];
+    if(a>0)rets.push(Math.abs(cs[i]-a)/a*100);
+  }
+  if(rets.length<10)return ffCfg.sigma;
+  rets.sort((x,y)=>x-y);
+  return Math.max(0.2,Math.min(60,rets[Math.floor(rets.length/2)]));
+}
+
+// ── 均线末值 ──
+function ffMaLast(cs,p){
+  if(cs.length<p)return null;
+  let s=0;for(let i=cs.length-p;i<cs.length;i++)s+=cs[i];
+  return s/p;
+}
+function ffTemaLast(cs,p){
+  const t=calcTEMA(cs,p);
+  for(let i=t.length-1;i>=0;i--)if(t[i]!=null)return t[i];
+  return null;
+}
+
+// ── 重算所有均线位置（每3分钟 / 指标变更时）──
+function ffRecomputeLines(){
+  const inds=sharedInds.filter(i=>i.type==='ma-line'&&!i.hidden&&i.p>0);
+  if(!inds.length){ffLines=[];return;}
+  const pmax=Math.max(...inds.map(i=>i.p));
+  const out=[];
+  for(const tf of FF_TFS){
+    const d=ffData[tf];
+    if(!d||!d.closes.length)continue;
+    const cs=d.closes;
+    for(const ind of inds){
+      const p=ind.p;
+      if(cs.length<p+2)continue;               // 历史不足，跳过（如1月线的MA600）
+      if(ffCfg.useMa){
+        const v=ffMaLast(cs,p);
+        if(v!=null&&isFinite(v))out.push({tf,type:'MA',p,pmax,color:ind.color,value:v,conf:true});
+      }
+      if(ffCfg.useTema){
+        const v=ffTemaLast(cs,p);
+        // TEMA 需约3倍参数长度才收敛，不足则标低可信
+        if(v!=null&&isFinite(v))out.push({tf,type:'TEMA',p,pmax,color:ind.color,value:v,conf:cs.length>=p*3});
+      }
+    }
+  }
+  ffLines=out;
+}
+
+// ── 打分（跟随实时价，极轻量）──
+function ffScoreAll(price){
+  const sig=Math.max(0.05,ffSigma), a=ffCfg.alpha, rows=[];
+  for(const L of ffLines){
+    const wtf=(ffCfg.weights[L.tf]??0)/100;
+    if(wtf<=0)continue;
+    const wp=Math.pow(L.p/L.pmax,a);
+    const d=Math.abs(price-L.value)/price*100;
+    const r=d/sig, wd=1/(1+r*r);
+    let s=wtf*wp*wd*100;
+    if(!L.conf)s*=0.5;                          // 低可信线减半
+    rows.push({...L,d,rel:(L.value-price)/price*100,score:s});
+  }
+  rows.sort((x,y)=>y.score-x.score);
+  return rows;
+}
+
+// ── 共振分箱：相近价位的线合并求和 ──
+function ffBin(rows){
+  const bw=Math.max(0.02,ffCfg.bin), m=new Map();
+  for(const r of rows){
+    const k=Math.round(r.rel/bw);
+    let b=m.get(k);
+    if(!b){b={k,rel:k*bw,total:0,items:[]};m.set(k,b);}
+    b.total+=r.score;b.items.push(r);
+  }
+  for(const b of m.values())b.items.sort((x,y)=>y.score-x.score);
+  return [...m.values()];
+}
+
+function ffPrice(){
+  if(livePrice)return livePrice;
+  for(const p of panels){const c=p.candles?.[p.candles.length-1];if(c)return c.close;}
+  return null;
+}
+
+// ── 渲染 ──
+function ffScheduleRender(){
+  const now=Date.now();
+  if(now-_ffRenderT<400)return;                 // 节流
+  _ffRenderT=now;ffRender();
+}
+function ffRender(){
+  if(!ffCfg.open)return;
+  const lad=document.getElementById('ff-ladder'), rk=document.getElementById('ff-rank'),
+        meta=document.getElementById('ff-meta');
+  if(!lad||!rk)return;
+  const price=ffPrice();
+  if(meta){
+    const loaded=Object.keys(ffData).length;
+    meta.textContent=loaded<FF_TFS.length
+      ? `加载中 ${loaded}/${FF_TFS.length}`
+      : `σ ${ffSigma.toFixed(1)}% · ${ffCfg.hours}h · ${ffLines.length} 线`;
+  }
+  if(!price||!ffLines.length){
+    lad.innerHTML='<div class="ff-empty">正在拉取 16 个周期的历史数据…<br>首次加载约需几秒</div>';
+    rk.innerHTML='';return;
+  }
+
+  const rows=ffScoreAll(price);
+  const bins=ffBin(rows);
+  const res=bins.filter(b=>b.rel>0).sort((a,b)=>b.total-a.total).slice(0,7).sort((a,b)=>b.rel-a.rel);
+  const sup=bins.filter(b=>b.rel<=0).sort((a,b)=>b.total-a.total).slice(0,7).sort((a,b)=>b.rel-a.rel);
+  const mx=Math.max(1,...bins.map(b=>b.total));
+
+  const barFor=b=>{
+    const cs=[...new Set(b.items.slice(0,3).map(i=>i.color))];
+    return cs.length>1?`linear-gradient(90deg,${cs.join(',')})`:cs[0];
+  };
+  const labFor=b=>{
+    if(b.items.length>1)return `★共振 ×${b.items.length}`;
+    const i=b.items[0];
+    return `${i.tf} ${i.type}${i.p}`;
+  };
+  const titleFor=b=>b.items.map(i=>`${i.tf} ${i.type}(${i.p}) ${fmt(i.value)} 分${i.score.toFixed(0)}`).join(' / ');
+  const rowHtml=(b,dir)=>{
+    const zone=b.items.length>1?` zone ${dir}`:'';
+    const w=Math.max(3,b.total/mx*100);
+    const sign=b.rel>=0?'+':'';
+    return `<div class="ff-row${zone}" title="${escHtml(titleFor(b))}">`
+      +`<span class="ff-d">${sign}${b.rel.toFixed(1)}%</span>`
+      +`<div class="ff-bw"><div class="ff-bar" style="width:${w.toFixed(1)}%;background:${barFor(b)}"></div></div>`
+      +`<span class="ff-lb">${escHtml(labFor(b))}</span></div>`;
+  };
+
+  lad.innerHTML=
+    '<span class="ff-sec" style="color:var(--red)">▲ 压力</span>'
+    +(res.length?res.map(b=>rowHtml(b,'res')).join(''):'<div class="ff-empty" style="padding:4px">上方暂无明显力量</div>')
+    +`<div class="ff-now"><span class="ff-d" style="font-weight:700;color:var(--text)">现价</span>`
+    +`<div class="ff-line"></div><span class="ff-px">${fmt(price)}</span></div>`
+    +(sup.length?sup.map(b=>rowHtml(b,'sup')).join(''):'<div class="ff-empty" style="padding:4px">下方暂无明显力量</div>')
+    +'<span class="ff-sec" style="color:var(--green)">▼ 支撑</span>';
+
+  rk.innerHTML='<span class="ff-sec" style="color:var(--text2)">力量排行</span>'
+    +rows.slice(0,12).map(r=>{
+      const sup2=r.rel<=0;
+      return `<div class="ff-rk" title="${escHtml(r.tf+' '+r.type+'('+r.p+') '+fmt(r.value))}">`
+        +`<span class="tfb">${r.tf}</span>`
+        +`<span class="sw" style="background:${r.color}"></span>`
+        +`<span class="nm"${r.conf?'':' style="opacity:.55"'}>${r.type}${r.p}${r.conf?'':' ·低可信'}</span>`
+        +`<span class="vl">${(r.rel>=0?'+':'')+r.rel.toFixed(1)}%</span>`
+        +`<span class="sc" style="color:${sup2?'var(--green)':'var(--red)'}">${r.score.toFixed(0)}</span></div>`;
+    }).join('');
+}
+
+// ══ 设置弹窗 ══
+function openFFPop(anchor){
+  const pop=document.getElementById('ffpop');
+  if(pop.style.display==='flex'){closeFFPop();return;}
+  ffSyncPop();ffRenderWeights();
+  pop.style.display='flex';
+  const r=anchor.getBoundingClientRect();
+  let left=Math.max(4,Math.min(window.innerWidth-316,r.left-280));
+  pop.style.left=left+'px';pop.style.top=Math.min(r.bottom+4,window.innerHeight-120)+'px';
+}
+function closeFFPop(){document.getElementById('ffpop').style.display='none';ffSaveCfg();}
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('ffpop');
+  if(pop&&pop.style.display==='flex'&&!pop.contains(e.target)&&!e.target.closest('.ff-ic'))closeFFPop();
+});
+
+function ffSyncPop(){
+  const g=id=>document.getElementById(id);
+  g('ff-hours').value=ffCfg.hours; g('ff-hours-v').textContent=ffCfg.hours+'h';
+  g('ff-sauto').checked=ffCfg.sigmaAuto;
+  g('ff-sigma').value=Math.round(ffSigma*10); g('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
+  g('ff-sigma').disabled=ffCfg.sigmaAuto;
+  g('ff-alpha').value=Math.round(ffCfg.alpha*100); g('ff-alpha-v').textContent=ffCfg.alpha.toFixed(2);
+  g('ff-bin').value=Math.round(ffCfg.bin*100); g('ff-bin-v').textContent=ffCfg.bin.toFixed(2)+'%';
+  g('ff-utema').checked=ffCfg.useTema; g('ff-uma').checked=ffCfg.useMa;
+  document.querySelectorAll('#ff-presets button').forEach(b=>b.classList.toggle('on',b.dataset.k===ffCfg.preset));
+}
+function ffSetHours(v){
+  ffCfg.hours=Math.max(1,parseInt(v)||36);
+  document.getElementById('ff-hours-v').textContent=ffCfg.hours+'h';
+  ffSigma=ffCalcSigma();
+  document.getElementById('ff-sigma').value=Math.round(ffSigma*10);
+  document.getElementById('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
+  ffSaveCfg();ffRender();
+}
+function ffSetSigmaAuto(on){
+  ffCfg.sigmaAuto=on;document.getElementById('ff-sigma').disabled=on;
+  ffSigma=ffCalcSigma();ffSyncPop();ffSaveCfg();ffRender();
+}
+function ffSetSigma(v){
+  ffCfg.sigma=Math.max(0.2,(parseInt(v)||30)/10);
+  if(!ffCfg.sigmaAuto)ffSigma=ffCfg.sigma;
+  document.getElementById('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
+  ffSaveCfg();ffRender();
+}
+function ffSetAlpha(v){
+  ffCfg.alpha=(parseInt(v)||70)/100;
+  document.getElementById('ff-alpha-v').textContent=ffCfg.alpha.toFixed(2);
+  ffSaveCfg();ffRender();
+}
+function ffSetBin(v){
+  ffCfg.bin=Math.max(0.02,(parseInt(v)||20)/100);
+  document.getElementById('ff-bin-v').textContent=ffCfg.bin.toFixed(2)+'%';
+  ffSaveCfg();ffRender();
+}
+function ffSetUse(k,v){ffCfg[k]=v;ffSaveCfg();ffRecomputeLines();ffRender();}
+function ffApplyPreset(k){
+  const pr=FF_PRESETS[k];if(!pr)return;
+  ffCfg.preset=k;ffCfg.hours=pr.hours;ffCfg.weights={...pr.w};
+  ffSortOrder();ffSigma=ffCalcSigma();
+  ffSyncPop();ffRenderWeights();ffSaveCfg();ffRender();
+}
+// 按当前顺序沿平滑曲线重新铺一遍权重
+function ffAutoWeights(){
+  const n=ffCfg.order.length;
+  ffCfg.order.forEach((tf,i)=>{
+    const t=n>1?i/(n-1):0;
+    ffCfg.weights[tf]=Math.max(2,Math.round(100*Math.pow(1-t,1.5)));
+  });
+  ffCfg.preset='';ffRenderWeights();ffSyncPop();ffSaveCfg();ffRender();
+}
+
+// ── 周期权重表（按住 ⣿ 拖动排序）──
+function ffRenderWeights(){
+  const box=document.getElementById('ff-wlist');if(!box)return;
+  box.innerHTML='';
+  ffCfg.order.forEach(tf=>{
+    const w=ffCfg.weights[tf]??0;
+    const row=document.createElement('div');
+    row.className='ffw';row.dataset.tf=tf;
+    row.innerHTML=`<span class="gr">⣿</span><span class="tf">${tf}</span>`
+      +`<input type="range" min="0" max="100" step="1" value="${w}">`
+      +`<span class="wv">${w}</span>`;
+    const inp=row.querySelector('input'), vv=row.querySelector('.wv');
+    inp.oninput=()=>{
+      ffCfg.weights[tf]=parseInt(inp.value)||0;
+      vv.textContent=ffCfg.weights[tf];ffCfg.preset='';
+      ffSaveCfg();ffRender();
+    };
+    row.querySelector('.gr').addEventListener('pointerdown',e=>ffDragStart(e,row));
+    box.appendChild(row);
+  });
+}
+function ffDragStart(e,row){
+  e.preventDefault();
+  const box=document.getElementById('ff-wlist');
+  const rows=[...box.children];
+  const h=row.offsetHeight+3;
+  const startY=e.clientY, startIdx=rows.indexOf(row);
+  let cur=startIdx;
+  row.classList.add('drag');
+  const move=ev=>{
+    const delta=Math.round((ev.clientY-startY)/h);
+    let next=Math.max(0,Math.min(rows.length-1,startIdx+delta));
+    if(next===cur)return;
+    const arr=ffCfg.order;
+    const [it]=arr.splice(cur,1);
+    arr.splice(next,0,it);
+    cur=next;
+    ffRenderWeights();
+    const nr=document.getElementById('ff-wlist').children[cur];
+    if(nr){nr.classList.add('drag');nr.querySelector('.gr').setPointerCapture?.(ev.pointerId);}
+  };
+  const up=()=>{
+    document.removeEventListener('pointermove',move);
+    document.removeEventListener('pointerup',up);
+    ffRenderWeights();ffSaveCfg();ffRender();
+  };
+  document.addEventListener('pointermove',move);
+  document.addEventListener('pointerup',up);
+}
+
+// ── 抽屉宽度拖动 ──
+(function(){
+  const d=document.getElementById('ff-drawer'), h=document.getElementById('ff-handle');
+  if(!d||!h)return;
+  let on=false,sx=0,sw=0;
+  h.addEventListener('mousedown',e=>{on=true;sx=e.clientX;sw=d.offsetWidth;e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!on)return;
+    // ★抽屉宽度范围 260~620px
+    const w=Math.max(260,Math.min(620,sw-(e.clientX-sx)));
+    d.style.width=w+'px';ffCfg.width=w;
+  });
+  document.addEventListener('mouseup',()=>{if(on){on=false;ffSaveCfg();resizeAll();}});
+})();
+
+// ── 启动 ──
+function ffInit(){
+  ffLoadCfg();
+  const d=document.getElementById('ff-drawer');
+  if(d){d.style.width=ffCfg.width+'px';d.classList.toggle('show',ffCfg.open);}
+  document.getElementById('ff-btn')?.classList.toggle('on',ffCfg.open);
+  ffLoadAll();
+  setInterval(ffLoadAll,FF_FETCH_MS);        // 定期刷新均线值
+  setInterval(()=>{if(ffCfg.open)ffScheduleRender();},1000);
+}
+
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
@@ -1748,6 +2281,7 @@ function bootCommon(){
   loadAlertCfg();
   document.getElementById('alert-btn')?.classList.toggle('on',alertCfg.on);
   checkAmplitude();setInterval(checkAmplitude,60000);   // ★每60秒检查一次振幅
+  ffInit();   // ⚡周期力场
 }
 
 function init(){
