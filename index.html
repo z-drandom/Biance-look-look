@@ -206,7 +206,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .ff-rk .sc{margin-left:auto;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .ff-rk.sup .sc{color:var(--blue)}
 .ff-rk.res .sc{color:var(--red)}
-.ff-read{font-size:10px;color:var(--text2);min-height:15px;line-height:1.4;margin-top:2px}
+.ff-read{font-size:10px;color:var(--text2);min-height:28px;line-height:1.5;margin-top:2px}
 .ff-read b{color:var(--text);font-size:11px}
 .ff-empty{padding:18px 12px;font-size:11px;color:var(--text2);text-align:center;line-height:1.7}
 
@@ -411,6 +411,14 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
           <span class="vv" id="ff-alpha-v">2.00</span>
         </div>
         <div id="ff-alpha-hint" class="ffp-hint"></div>
+        <div class="ffp-row">
+          <span class="lb">趋势线有效性</span>
+          <input type="range" id="ff-resp" min="0" max="100" step="5" value="100" oninput="ffSetResp(this.value)">
+          <span class="vv" id="ff-resp-v">100%</span>
+        </div>
+        <div class="ffp-hint">价格反复来回穿越的均线会被降权——那种线不是支撑/压力，
+          只是跟着价格跑。统计最近 400 根K线里该线被测试时<b>守住</b>还是<b>被击穿</b>。
+          调 0 = 关闭此项，只看距离。</div>
         <div class="ffp-row">
           <span class="lb">共振箱宽</span>
           <input type="range" id="ff-bin" min="0" max="150" step="1" oninput="ffSetBin(this.value)">
@@ -1935,13 +1943,17 @@ async function checkAmplitude(){
 // 均线此刻位置，按三项权重算出它对现价的支撑/压力强度，
 // 再把相近价位的线合并成「共振区」。
 //
-//   力量分 = W周期 × W参数 × W距离 × 100
+//   力量分 = W周期 × W参数 × W距离 × W有效 × 100
 //     W周期 = 用户设定(0~100)/100      ← 弹窗里可拖动排序 + 逐个微调
 //     W参数 = (参数/最大参数)^α        α默认2.0，均线参数越大权重越高，
 //                                      且差距悬殊：600约为400的2.2倍、200的9倍
 //     W距离 = 1/(1+(d/σ)²)            柯西衰减：平滑、永不归零、无截断
 //                                      d=距现价百分比；σ=半权距离
 //                                      （距离恰为σ时权重正好砍半）
+//     W有效 = 1+(2×有效性−1)×强度   「这根线历史上扛不扛得住」
+//                                      有效性=(守住+1)/(守住+击穿+2)
+//                                      价格反复穿越的线会被大幅降权——
+//                                      那种线不是支撑/压力，只是跟着价格跑
 //     TEMA 与 MA 平级，不加区分系数
 //
 //   σ 默认由「持仓时长」自动推导 = 过去约120个该时长窗口内
@@ -1954,6 +1966,7 @@ const FF_KEY='btcll_ff_v2';
 const FF_TFS=[...BINANCE_TFS];          // 全部16个周期，不限于已打开的视窗
 const FF_FETCH_MS=180000;               // ★均线值重算间隔(ms)
 const FF_STAGGER_MS=260;                // ★各周期错峰拉取间隔(ms)
+const FF_WIN=400;                       // ★统计趋势线有效性时回看多少根K线
 
 // 三套权重预设（数值=该周期权重 0~100）
 const FF_PRESETS={
@@ -1967,7 +1980,7 @@ const FF_PRESETS={
 
 let ffCfg={
   open:false, width:340, preset:'swing', hours:36,
-  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2,
+  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2, respectW:1.0,
   useTema:true, useMa:true,
   weights:{...FF_PRESETS.swing.w},
 };
@@ -2033,16 +2046,42 @@ function ffCalcSigma(){
   return Math.max(0.2,Math.min(60,rets[Math.floor(rets.length/2)]));
 }
 
-// ── 均线末值 ──
-function ffMaLast(cs,p){
-  if(cs.length<p)return null;
-  let s=0;for(let i=cs.length-p;i<cs.length;i++)s+=cs[i];
-  return s/p;
+// ── 滚动求和均线（O(n)，整条序列，供有效性统计用）──
+function ffMaSeries(cs,p){
+  const out=new Array(cs.length).fill(null);
+  let s=0;
+  for(let i=0;i<cs.length;i++){
+    s+=cs[i];
+    if(i>=p)s-=cs[i-p];
+    if(i>=p-1)out[i]=s/p;
+  }
+  return out;
 }
-function ffTemaLast(cs,p){
-  const t=calcTEMA(cs,p);
-  for(let i=t.length-1;i>=0;i--)if(t[i]!=null)return t[i];
-  return null;
+
+// ── 趋势线「有效性」：这根线历史上扛不扛得住 ──
+// 价格进入该线附近（±1根典型波幅）记为一次测试：
+//   从同一侧离开 = 守住(B)；从另一侧离开 = 击穿(X)
+// 有效性=(B+1)/(B+X+2)：拉普拉斯平滑，没测试过时为中性0.5，
+// 价格来回穿梭的线会落到接近0 —— 正是那种「看着近其实没用」的线
+function ffRespect(cs,line,win){
+  const n=cs.length, from=Math.max(1,n-win);
+  let mv=0,c=0;
+  for(let i=from;i<n;i++){mv+=Math.abs(cs[i]-cs[i-1]);c++;}
+  const band=c?mv/c:0;
+  if(!(band>0))return{B:0,X:0,respect:.5};
+  let B=0,X=0,inEp=false,sideIn=0,lastOut=0;
+  for(let i=from;i<n;i++){
+    const L=line[i];
+    if(L==null)continue;
+    const d=cs[i]-L, sd=d>=0?1:-1;
+    if(Math.abs(d)<=band){
+      if(!inEp){inEp=true;sideIn=lastOut||sd;}      // 进入测试，记住从哪一侧来
+    }else{
+      if(inEp){inEp=false;if(sd===sideIn)B++;else X++;}
+      lastOut=sd;
+    }
+  }
+  return{B,X,respect:(B+1)/(B+X+2)};
 }
 
 // ── 重算所有均线位置（每3分钟 / 指标变更时）──
@@ -2059,13 +2098,19 @@ function ffRecomputeLines(){
       const p=ind.p;
       if(cs.length<p+2)continue;               // 历史不足，跳过（如1月线的MA600）
       if(ffCfg.useMa){
-        const v=ffMaLast(cs,p);
-        if(v!=null&&isFinite(v))out.push({tf,type:'MA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:true});
+        const arr=ffMaSeries(cs,p), v=arr[arr.length-1];
+        if(v!=null&&isFinite(v)){
+          const rp=ffRespect(cs,arr,FF_WIN);
+          out.push({tf,type:'MA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:true,...rp});
+        }
       }
       if(ffCfg.useTema){
-        const v=ffTemaLast(cs,p);
+        const arr=calcTEMA(cs,p), v=arr[arr.length-1];
         // TEMA 需约3倍参数长度才收敛，不足则标低可信
-        if(v!=null&&isFinite(v))out.push({tf,type:'TEMA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:cs.length>=p*3});
+        if(v!=null&&isFinite(v)){
+          const rp=ffRespect(cs,arr,FF_WIN);
+          out.push({tf,type:'TEMA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:cs.length>=p*3,...rp});
+        }
       }
     }
   }
@@ -2081,7 +2126,9 @@ function ffScoreAll(price){
     const wp=Math.pow(L.p/L.pmax,a);
     const d=Math.abs(price-L.value)/price*100;
     const r=d/sig, wd=1/(1+r*r);
-    let s=wtf*wp*wd*100;
+    // 反复被价格穿越的线大幅降权：近不等于有效
+    const wr=1+(2*(L.respect??.5)-1)*(ffCfg.respectW??1);
+    let s=wtf*wp*wd*wr*100;
     if(!L.conf)s*=0.5;                          // 低可信线减半
     rows.push({...L,d,rel:(L.value-price)/price*100,score:s});
   }
@@ -2238,6 +2285,12 @@ function ffRender(){
     const th=Math.max(1.5,Math.min(4,r.lw||1.5));
     return `<i class="ff-ln" style="border-top:${th}px ${r.type==='MA'?'dashed':'solid'} ${r.color}"></i>`;
   };
+  // 有效性文案：守住/击穿次数 + 百分比；反复被穿的线前面标 ⚠
+  const rpTxt=r=>{
+    const pc=Math.round((r.respect??.5)*100), t=(r.B||0)+(r.X||0);
+    return t?`有效性 ${pc}%（测试${t}次·守住${r.B}·击穿${r.X}）`:`有效性 ${pc}%（未被测试过）`;
+  };
+  const warn=r=>(r.respect??.5)<0.35?'<span title="价格反复穿越，此线作为支撑/压力基本失效" style="color:var(--orange)">⚠</span>':'';
   const allOn=TOP.length>0&&TOP.every(r=>ffPinned.has(ffKeyOf(r)));
   rk.innerHTML='<div class="ff-lg"><span>力量排行</span>'
     +'<span><i style="border-top:3px solid var(--text2)"></i>TEMA</span>'
@@ -2246,10 +2299,10 @@ function ffRender(){
     +TOP.map(r=>{
       const sup=r.rel<=0, k=ffKeyOf(r);
       return `<div class="ff-rk ${sup?'sup':'res'}${ffPinned.has(k)?' pin':''}" data-k="${k}"`
-        +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}${r.conf?'':'（低可信）'}　点击可固定点亮`)}"`
+        +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}\n${rpTxt(r)}${r.conf?'':'\n（低可信：历史不足）'}\n点击可固定点亮`)}"`
         +`${r.conf?'':' style="opacity:.6"'}>`
         +`<span class="tfb">${r.tf}</span>`+lnOf(r)
-        +`<span class="nm">${r.p}</span>`
+        +`<span class="nm">${r.p}</span>`+warn(r)
         +`<span class="vl">${(r.rel>=0?'+':'')+r.rel.toFixed(1)}%</span>`
         +`<span class="sc">${r.score.toFixed(0)}</span></div>`;
     }).join('')
@@ -2263,7 +2316,8 @@ function ffRender(){
       const r=ffRowByKey.get(k), rd=document.getElementById('ff-read');
       if(r&&rd)rd.innerHTML=`<b>${r.tf} ${r.type}(${r.p})</b>　${fmt(r.value)}　`
         +`<span style="color:${r.rel<=0?'var(--blue)':'var(--red)'}">${r.rel>=0?'+':''}${r.rel.toFixed(2)}%</span>`
-        +`　力量 <b>${r.score.toFixed(1)}</b>${ffHasPanel(r.tf)?'':'　<span style="color:var(--text2)">（该周期未开视窗）</span>'}`;
+        +`　力量 <b>${r.score.toFixed(1)}</b>`
+        +`<br>${escHtml(rpTxt(r))}${ffHasPanel(r.tf)?'':'　（该周期未开视窗）'}`;
     });
     el.addEventListener('click',()=>{
       if(ffPinned.has(k))ffPinned.delete(k);else ffPinned.add(k);
@@ -2299,6 +2353,8 @@ function ffSyncPop(){
   g('ff-sigma').value=Math.round(ffSigma*10); g('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
   g('ff-sigma').disabled=ffCfg.sigmaAuto;
   g('ff-alpha').value=Math.round(ffCfg.alpha*100); g('ff-alpha-v').textContent=ffCfg.alpha.toFixed(2); ffAlphaHint();
+  g('ff-resp').value=Math.round((ffCfg.respectW??1)*100);
+  g('ff-resp-v').textContent=Math.round((ffCfg.respectW??1)*100)+'%';
   g('ff-bin').value=Math.round(ffCfg.bin*100);
   g('ff-bin-v').textContent=ffCfg.bin>0?ffCfg.bin.toFixed(2)+'%':'0（不合并）';
   g('ff-utema').checked=ffCfg.useTema; g('ff-uma').checked=ffCfg.useMa;
@@ -2334,6 +2390,11 @@ function ffAlphaHint(){
   if(!ps.length){el.textContent='';return;}
   const pm=Math.max(...ps);
   el.textContent='相对权重　'+ps.map(p=>p+':'+Math.pow(p/pm,ffCfg.alpha).toFixed(2)).join('　');
+}
+function ffSetResp(v){
+  ffCfg.respectW=Math.max(0,Math.min(1,(parseInt(v)||0)/100));
+  document.getElementById('ff-resp-v').textContent=Math.round(ffCfg.respectW*100)+'%';
+  ffSaveCfg();ffRender();
 }
 function ffSetBin(v){
   ffCfg.bin=Math.max(0,(parseInt(v)||0)/100);
