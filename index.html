@@ -169,40 +169,44 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 #ff-body{flex:1;overflow-y:auto;min-height:0}
 #ff-body::-webkit-scrollbar{width:4px}
 #ff-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
-#ff-ladder{padding:9px 10px 6px;display:flex;flex-direction:column;gap:4px}
-.ff-sec{font-size:9px;font-weight:700;letter-spacing:.5px}
-/* 所有行同高：共振行只多一层底色，不改变尺寸，避免调参时列表跳动 */
-.ff-row{display:flex;align-items:center;gap:6px;border-radius:3px;padding:3px 2px;margin:0 -2px}
-.ff-row.zone.res{background:rgba(239,83,80,.10)}
-.ff-row.zone.sup{background:rgba(38,166,154,.12)}
-.ff-d{width:46px;text-align:right;font-size:10px;color:var(--text2);font-variant-numeric:tabular-nums;flex-shrink:0}
-.ff-row.zone .ff-d{font-weight:700}
-.ff-bw{flex:1;min-width:0;display:flex}
-.ff-bar{height:13px;border-radius:2px;min-width:2px;display:flex;overflow:hidden}
-.ff-bar i{display:block;height:100%;flex-shrink:0}
-.ff-lb{width:74px;flex-shrink:0;font-size:9px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ff-row.zone .ff-lb{font-weight:700}
-.ff-now{display:flex;align-items:center;gap:6px;margin:3px 0}
-.ff-now .ff-line{flex:1;height:2px;background:var(--text)}
-.ff-now .ff-px{font-size:10px;font-weight:700;white-space:nowrap}
-/* ── 力量排行：左支撑 / 右压力 双栏柱状图，纵轴=力量分 ── */
-#ff-rank{border-top:1px solid var(--border);padding:9px 10px 11px;display:flex;flex-direction:column;gap:6px}
-.ff-lg{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text2)}
+/* ── 波动区间结论（按力量前14条线归纳）── */
+#ff-concl{padding:9px 10px 4px;display:flex;flex-direction:column;gap:7px}
+.ffc-hd{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.4px}
+.ffc{border:1px solid var(--border);border-radius:5px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
+.ffc-t{display:flex;align-items:baseline;gap:6px}
+.ffc-t b{font-size:12px;font-weight:700}
+.ffc-t span{font-size:9px;color:var(--text2)}
+.ffc-t em{margin-left:auto;font-style:normal;font-size:10px;color:var(--text2);font-variant-numeric:tabular-nums}
+.ffc-rg{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.ffc-rg .lo{color:var(--blue)}
+.ffc-rg .hi{color:var(--red)}
+.ffc-rg .dash{color:var(--text2);font-weight:400}
+.ffc-pc{font-size:10px;color:var(--text2);font-variant-numeric:tabular-nums}
+.ffc-dt{font-size:9px;color:var(--text2);line-height:1.5}
+.ffc-na{font-size:10px;color:var(--text2)}
+/* ── 力量排行：列表式（支撑蓝底 / 压力红底），点击可固定点亮 ── */
+#ff-rank{border-top:1px solid var(--border);padding:9px 10px 11px;display:flex;flex-direction:column;gap:4px}
+.ff-lg{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text2)}
 .ff-lg i{display:inline-block;width:18px;vertical-align:middle;margin-right:3px}
-.ff-chart{display:flex;gap:4px;height:158px}
-.ff-yax{width:24px;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between;
-        font-size:9px;color:var(--text2);text-align:right;padding-bottom:15px;font-variant-numeric:tabular-nums}
-.ff-plot{flex:1;min-width:0;display:flex;gap:2px}
-.ff-half{flex:1;min-width:0;display:flex;align-items:stretch;gap:2px;border-bottom:1px solid var(--border)}
-.ff-half.sup{justify-content:flex-end;background:rgba(38,166,154,.05)}
-.ff-half.res{justify-content:flex-start;background:rgba(239,83,80,.05)}
-.ff-mid{width:1px;background:var(--border);flex-shrink:0}
-.ff-b{width:17px;flex-shrink:0;display:flex;flex-direction:column;cursor:pointer;padding-bottom:15px;position:relative}
-.ff-b .bcol{flex:1;display:flex;align-items:flex-end}
-.ff-b .bar{width:100%;border-radius:2px 2px 0 0;min-height:2px}
-.ff-b .cap{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:8px;color:var(--text2);white-space:nowrap}
-.ff-b:hover .bar{outline:2px solid var(--text);outline-offset:-1px}
-.ff-read{font-size:10px;color:var(--text2);min-height:15px;line-height:1.4}
+.ff-allbtn{margin-left:auto;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+           border-radius:3px;font-size:10px;padding:2px 7px;cursor:pointer;white-space:nowrap}
+.ff-allbtn:hover{border-color:var(--blue);color:var(--blue)}
+.ff-allbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.ff-rk{display:flex;align-items:center;gap:7px;padding:3px 6px;border-radius:3px;cursor:pointer;
+       border-left:3px solid transparent}
+.ff-rk.sup{background:rgba(41,98,255,.10)}
+.ff-rk.res{background:rgba(239,83,80,.10)}
+.ff-rk:hover{filter:brightness(.94)}
+.ff-rk.pin{border-left-color:var(--text);font-weight:700}
+.ff-rk .tfb{font-size:11px;font-weight:700;background:var(--bg3);border-radius:3px;padding:2px 5px;
+            min-width:34px;text-align:center;flex-shrink:0}
+.ff-rk .ff-ln{width:28px;flex-shrink:0;align-self:center}
+.ff-rk .nm{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ff-rk .vl{font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums}
+.ff-rk .sc{margin-left:auto;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.ff-rk.sup .sc{color:var(--blue)}
+.ff-rk.res .sc{color:var(--red)}
+.ff-read{font-size:10px;color:var(--text2);min-height:15px;line-height:1.4;margin-top:2px}
 .ff-read b{color:var(--text);font-size:11px}
 .ff-empty{padding:18px 12px;font-size:11px;color:var(--text2);text-align:center;line-height:1.7}
 
@@ -379,7 +383,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
       <span class="ff-ic" style="margin-left:0" onclick="toggleFF()" title="关闭">✕</span>
     </div>
     <div id="ff-body">
-      <div id="ff-ladder"></div>
+      <div id="ff-concl"></div>
       <div id="ff-rank"></div>
       <div id="ff-set">
         <div class="ffp-sec">权重预设</div>
@@ -409,11 +413,11 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
         <div id="ff-alpha-hint" class="ffp-hint"></div>
         <div class="ffp-row">
           <span class="lb">共振箱宽</span>
-          <input type="range" id="ff-bin" min="2" max="150" step="1" oninput="ffSetBin(this.value)">
+          <input type="range" id="ff-bin" min="0" max="150" step="1" oninput="ffSetBin(this.value)">
           <span class="vv" id="ff-bin-v">0.20%</span>
         </div>
-        <div class="ffp-hint">价位相差在此范围内的线算作同一个「共振区」，分数相加。
-          调大→容易聚成大簇看整体，调小→区分更细。</div>
+        <div class="ffp-hint">结论里把价位相差在此范围内的线并成一个价区、分数相加。
+          调到 <b>0 = 完全不合并</b>，只认力量最强的单条线；调大→更容易聚成大簇。</div>
         <div style="display:flex;gap:14px">
           <label class="ffp-chk"><input type="checkbox" id="ff-utema" onchange="ffSetUse('useTema',this.checked)"><span>统计 TEMA</span></label>
           <label class="ffp-chk"><input type="checkbox" id="ff-uma" onchange="ffSetUse('useMa',this.checked)"><span>统计 MA</span></label>
@@ -2086,41 +2090,55 @@ function ffScoreAll(price){
 }
 
 // ── 共振分箱：相近价位的线合并求和 ──
+// 把价位相近的线并成一个价区；箱宽=0 表示不合并（每条线各自成区）
 function ffBin(rows){
-  const bw=Math.max(0.02,ffCfg.bin), m=new Map();
+  const bw=ffCfg.bin, m=new Map();
+  let seq=0;
   for(const r of rows){
-    const k=Math.round(r.rel/bw);
+    const k=bw>0?Math.round(r.rel/bw):('x'+(seq++));
     let b=m.get(k);
-    if(!b){b={k,rel:k*bw,total:0,items:[]};m.set(k,b);}
+    if(!b){b={k,rel:bw>0?k*bw:r.rel,total:0,items:[]};m.set(k,b);}
     b.total+=r.score;b.items.push(r);
   }
   for(const b of m.values())b.items.sort((x,y)=>y.score-x.score);
   return [...m.values()];
 }
 
-// ── 悬停排行榜柱子 → 高亮图表上对应的那根均线 ──
-// 该周期有开着的视窗才看得到效果（力场统计全部16个周期，但只有
-// 打开的视窗里才有线可高亮）
-let _ffHi=[];
+// ── 点亮图表上的均线 ──
+// 固定点亮(点击,可多条) 与 临时点亮(鼠标划过) 并存；
+// 只有开着该周期视窗的面板才有线可点亮（力场统计全部16个周期）
+let _ffHi=[];                       // [series, 原始options] 便于还原
+let ffPinned=new Set();             // 固定点亮的线
+let ffHover=null;                   // 当前划过的线
+const ffRowByKey=new Map();         // key -> 该线的数据
+const ffKeyOf=r=>`${r.tf}|${r.type}|${r.p}`;
+
 function ffHasPanel(tf){return panels.some(p=>p.tf===tf&&p.chart);}
-function ffClearHighlight(){
+function ffRestore(){
   _ffHi.forEach(([sr,o])=>{try{sr.applyOptions(o);}catch(_){}});
   _ffHi=[];
 }
-function ffHighlight(r){
-  ffClearHighlight();
-  const key=r.id+(r.type==='TEMA'?'_tema':'_ma');
+function ffClearHighlight(){ffHover=null;ffPinned.clear();ffRestore();}
+function ffApplyHighlight(){
+  ffRestore();
+  const keys=new Set(ffPinned);
+  if(ffHover)keys.add(ffHover);
+  if(!keys.size)return;
+  const want=[...keys].map(k=>ffRowByKey.get(k)).filter(Boolean);
   panels.forEach(p=>{
-    if(!p.chart||p.tf!==r.tf)return;
-    for(const [k,sr] of Object.entries(p.seriesMap||{})){
-      if(k===key){                                   // 目标线：加粗突出
-        _ffHi.push([sr,{lineWidth:r.lw||1.5,color:r.color}]);
-        try{sr.applyOptions({lineWidth:Math.min(8,(r.lw||1.5)+3),color:r.color});}catch(_){}
-      }else{                                         // 同视窗其余线：淡出
-        const ind=sharedInds.find(i=>k.startsWith(i.id));
-        if(!ind)continue;
+    if(!p.chart)return;
+    const hit=want.filter(r=>r.tf===p.tf);
+    if(!hit.length)return;                    // 该视窗没有被点亮的线 → 原样不动
+    for(const [sk,sr] of Object.entries(p.seriesMap||{})){
+      const ind=sharedInds.find(i=>sk.startsWith(i.id));
+      if(!ind)continue;
+      const on=hit.some(r=>sk===r.id+(r.type==='TEMA'?'_tema':'_ma'));
+      if(on){                                 // 被点亮：加粗突出
+        _ffHi.push([sr,{lineWidth:ind.lw||1.5,color:ind.color}]);
+        try{sr.applyOptions({lineWidth:Math.min(8,(ind.lw||1.5)+3),color:ind.color});}catch(_){}
+      }else{                                  // 同视窗其余线：淡出
         _ffHi.push([sr,{color:ind.color}]);
-        try{sr.applyOptions({color:hexRgba(ind.color,.10)});}catch(_){}
+        try{sr.applyOptions({color:hexRgba(ind.color,.08)});}catch(_){}
       }
     }
   });
@@ -2155,9 +2173,9 @@ function ffScheduleRender(){
 }
 function ffRender(){
   if(!ffCfg.open)return;
-  const lad=document.getElementById('ff-ladder'), rk=document.getElementById('ff-rank'),
+  const cc=document.getElementById('ff-concl'), rk=document.getElementById('ff-rank'),
         meta=document.getElementById('ff-meta');
-  if(!lad||!rk)return;
+  if(!cc||!rk)return;
   const price=ffPrice();
   if(meta){
     const loaded=Object.keys(ffData).length;
@@ -2166,97 +2184,104 @@ function ffRender(){
       : `σ ${ffSigma.toFixed(1)}% · ${ffCfg.hours}h · ${ffLines.length} 线`;
   }
   if(!price||!ffLines.length){
-    lad.innerHTML='<div class="ff-empty">正在拉取 16 个周期的历史数据…<br>首次加载约需几秒</div>';
+    cc.innerHTML='<div class="ff-empty">正在拉取 16 个周期的历史数据…<br>首次加载约需几秒</div>';
     rk.innerHTML='';return;
   }
 
   const rows=ffScoreAll(price);
-  const bins=ffBin(rows);
-  const res=bins.filter(b=>b.rel>0).sort((a,b)=>b.total-a.total).slice(0,7).sort((a,b)=>b.rel-a.rel);
-  const sup=bins.filter(b=>b.rel<=0).sort((a,b)=>b.total-a.total).slice(0,7).sort((a,b)=>b.rel-a.rel);
-  const mx=Math.max(1,...bins.map(b=>b.total));
+  const TOP=rows.slice(0,14);                 // ★结论与榜单都取力量前14
+  ffRowByKey.clear();
+  for(const r of TOP)ffRowByKey.set(ffKeyOf(r),r);
 
-  // 条内按各颜色的分数占比切成实色段（不用渐变：某色占多少就画多长）
-  const segsOf=b=>{
-    const m=new Map();
-    for(const i of b.items)m.set(i.color,(m.get(i.color)||0)+i.score);
-    return [...m.entries()].sort((x,y)=>y[1]-x[1])
-      .map(([c,v])=>`<i style="width:${(v/b.total*100).toFixed(2)}%;background:${c}"></i>`).join('');
+  // ══ 波动区间结论：按周期分三档，各档给出支撑~压力的区间 ══
+  // 档内先按「共振箱宽」把价位相近的线并成一个价区（箱宽=0 则不合并），
+  // 再取分数最高的那个价区作为该档的支撑 / 压力
+  const BK=[{n:'短线',tip:'≤1h',max:3600},{n:'中线',tip:'2h–12h',max:43200},{n:'长线',tip:'≥1d',max:Infinity}];
+  let lastMax=0;
+  cc.innerHTML='<div class="ffc-hd">波动区间结论 · 取力量前 14 条线</div>'+BK.map(bk=>{
+    const lo=lastMax; lastMax=bk.max;
+    const mine=TOP.filter(r=>{const sec=tfToSec(r.tf);return sec>lo&&sec<=bk.max;});
+    if(!mine.length)return `<div class="ffc"><div class="ffc-t"><b>${bk.n}</b><span>${bk.tip}</span></div>`
+      +'<div class="ffc-na">前14名里没有该档周期的线</div></div>';
+    const pick=side=>{
+      const g=ffBin(mine.filter(side==='sup'?(r=>r.rel<=0):(r=>r.rel>0)));
+      if(!g.length)return null;
+      const b=g.sort((x,y)=>y.total-x.total)[0];
+      // 价区取分数加权均价，强度取区内合力
+      const px=b.items.reduce((a,i)=>a+i.value*i.score,0)/b.total;
+      return {px,total:b.total,n:b.items.length,
+              tag:b.items.slice(0,2).map(i=>`${i.tf}·${i.type==='MA'?'虚':'实'}${i.p}`).join(' + ')
+                  +(b.items.length>2?` +${b.items.length-2}`:'')};
+    };
+    const sp=pick('sup'), rs=pick('res');
+    const pct=v=>((v-price)/price*100);
+    return `<div class="ffc">`
+      +`<div class="ffc-t"><b>${bk.n}</b><span>${bk.tip}</span>`
+      +`<em>${mine.length} 条</em></div>`
+      +`<div class="ffc-rg">`
+      +(sp?`<span class="lo">${fmt(sp.px)}</span>`:'<span class="ffc-na">无支撑</span>')
+      +`<span class="dash">─</span>`
+      +(rs?`<span class="hi">${fmt(rs.px)}</span>`:'<span class="ffc-na">无压力</span>')
+      +`</div>`
+      +`<div class="ffc-pc">`
+      +(sp?`${pct(sp.px).toFixed(2)}%`:'—')+' ~ '+(rs?`+${pct(rs.px).toFixed(2)}%`:'—')
+      +(sp&&rs?`　区间宽 ${((rs.px-sp.px)/price*100).toFixed(2)}%`:'')+`</div>`
+      +`<div class="ffc-dt">`
+      +(sp?`支撑 ${escHtml(sp.tag)}（合力 ${sp.total.toFixed(0)}）`:'')
+      +(sp&&rs?'<br>':'')
+      +(rs?`压力 ${escHtml(rs.tag)}（合力 ${rs.total.toFixed(0)}）`:'')
+      +`</div></div>`;
+  }).join('');
+
+  // ══ 力量排行：列表式，支撑蓝底 / 压力红底 ══
+  const lnOf=r=>{
+    const th=Math.max(1.5,Math.min(4,r.lw||1.5));
+    return `<i class="ff-ln" style="border-top:${th}px ${r.type==='MA'?'dashed':'solid'} ${r.color}"></i>`;
   };
-  const labFor=b=>{
-    if(b.items.length>1)return `★共振 ×${b.items.length}`;
-    const i=b.items[0];
-    return `${i.tf} ${i.type}${i.p}`;
-  };
-  const titleFor=b=>b.items.map(i=>`${i.tf} ${i.type}(${i.p}) ${fmt(i.value)} 分${i.score.toFixed(0)}`).join(' / ');
-  const rowHtml=(b,dir)=>{
-    const zone=b.items.length>1?` zone ${dir}`:'';
-    const w=Math.max(3,b.total/mx*100);
-    const sign=b.rel>=0?'+':'';
-    return `<div class="ff-row${zone}" title="${escHtml(titleFor(b))}">`
-      +`<span class="ff-d">${sign}${b.rel.toFixed(1)}%</span>`
-      +`<div class="ff-bw"><div class="ff-bar" style="width:${w.toFixed(1)}%">${segsOf(b)}</div></div>`
-      +`<span class="ff-lb">${escHtml(labFor(b))}</span></div>`;
-  };
-
-  lad.innerHTML=
-    '<span class="ff-sec" style="color:var(--red)">▲ 压力</span>'
-    +(res.length?res.map(b=>rowHtml(b,'res')).join(''):'<div class="ff-empty" style="padding:4px">上方暂无明显力量</div>')
-    +`<div class="ff-now"><span class="ff-d" style="font-weight:700;color:var(--text)">现价</span>`
-    +`<div class="ff-line"></div><span class="ff-px">${fmt(price)}</span></div>`
-    +(sup.length?sup.map(b=>rowHtml(b,'sup')).join(''):'<div class="ff-empty" style="padding:4px">下方暂无明显力量</div>')
-    +'<span class="ff-sec" style="color:var(--green)">▼ 支撑</span>';
-
-  // ── 力量排行：左=支撑、右=压力，纵轴=力量分，柱高∝分数 ──
-  const N=8;                                           // ★每侧最多显示几根柱
-  const supL=rows.filter(r=>r.rel<=0).slice(0,N);
-  const resL=rows.filter(r=>r.rel>0).slice(0,N);
-  const top=Math.max(1,...supL.concat(resL).map(r=>r.score));
-  // MA 用横条纹填充、TEMA 用实色填充，与图表上的虚线/实线对应（非渐变）
-  const fillOf=r=>r.type==='MA'
-    ? `repeating-linear-gradient(0deg,${r.color} 0 3px,transparent 3px 6px)`
-    : r.color;
-  const barOf=r=>`<div class="ff-b" data-k="${r.tf}|${r.type}|${r.p}"`
-    +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}${r.conf?'':'（低可信）'}`)}"`
-    +`${r.conf?'':' style="opacity:.55"'}>`
-    +`<div class="bcol"><div class="bar" style="height:${(r.score/top*100).toFixed(1)}%;background:${fillOf(r)}"></div></div>`
-    +`<span class="cap">${r.tf}</span></div>`;
-
+  const allOn=TOP.length>0&&TOP.every(r=>ffPinned.has(ffKeyOf(r)));
   rk.innerHTML='<div class="ff-lg"><span>力量排行</span>'
-    +'<span style="margin-left:auto"><i style="border-top:3px solid var(--text2)"></i>TEMA</span>'
-    +'<span><i style="border-top:3px dashed var(--text2)"></i>MA</span></div>'
-    +'<div class="ff-chart">'
-    +`<div class="ff-yax"><span>${top.toFixed(0)}</span><span>${(top/2).toFixed(0)}</span><span>0</span></div>`
-    +'<div class="ff-plot">'
-    +`<div class="ff-half sup">${supL.slice().reverse().map(barOf).join('')}</div>`
-    +'<div class="ff-mid"></div>'
-    +`<div class="ff-half res">${resL.map(barOf).join('')}</div>`
-    +'</div></div>'
-    +'<div class="ff-lg"><span style="color:var(--green);font-weight:700">◀ 支撑</span>'
-    +'<span style="margin-left:auto;color:var(--red);font-weight:700">压力 ▶</span></div>'
-    +'<div class="ff-read" id="ff-read">鼠标移到柱子上 → 左侧对应周期的视窗会高亮那根线</div>';
+    +'<span><i style="border-top:3px solid var(--text2)"></i>TEMA</span>'
+    +'<span><i style="border-top:3px dashed var(--text2)"></i>MA</span>'
+    +`<button class="ff-allbtn${allOn?' on':''}" id="ff-all">${allOn?'全部熄灭':'一键全部点亮'}</button></div>`
+    +TOP.map(r=>{
+      const sup=r.rel<=0, k=ffKeyOf(r);
+      return `<div class="ff-rk ${sup?'sup':'res'}${ffPinned.has(k)?' pin':''}" data-k="${k}"`
+        +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}${r.conf?'':'（低可信）'}　点击可固定点亮`)}"`
+        +`${r.conf?'':' style="opacity:.6"'}>`
+        +`<span class="tfb">${r.tf}</span>`+lnOf(r)
+        +`<span class="nm">${r.p}</span>`
+        +`<span class="vl">${(r.rel>=0?'+':'')+r.rel.toFixed(1)}%</span>`
+        +`<span class="sc">${r.score.toFixed(0)}</span></div>`;
+    }).join('')
+    +'<div class="ff-read" id="ff-read">划过＝临时点亮　点击＝固定点亮（再点取消）</div>';
 
-  // 悬停柱子 → 高亮图表上对应的那根均线 + 显示明细
-  const byKey=new Map();
-  for(const r of supL.concat(resL))byKey.set(`${r.tf}|${r.type}|${r.p}`,r);
-  rk.querySelectorAll('.ff-b').forEach(el=>{
+  // 交互：悬停临时点亮 / 点击固定点亮 / 一键全部
+  rk.querySelectorAll('.ff-rk').forEach(el=>{
+    const k=el.dataset.k;
     el.addEventListener('mouseenter',()=>{
-      const r=byKey.get(el.dataset.k);if(!r)return;
-      ffHighlight(r);
-      const rd=document.getElementById('ff-read');
-      if(rd)rd.innerHTML=`<b>${r.tf} ${r.type}(${r.p})</b>　${fmt(r.value)}　`
-        +`<span style="color:${r.rel<=0?'var(--green)':'var(--red)'}">${r.rel>=0?'+':''}${r.rel.toFixed(2)}%</span>`
+      ffHover=k;ffApplyHighlight();
+      const r=ffRowByKey.get(k), rd=document.getElementById('ff-read');
+      if(r&&rd)rd.innerHTML=`<b>${r.tf} ${r.type}(${r.p})</b>　${fmt(r.value)}　`
+        +`<span style="color:${r.rel<=0?'var(--blue)':'var(--red)'}">${r.rel>=0?'+':''}${r.rel.toFixed(2)}%</span>`
         +`　力量 <b>${r.score.toFixed(1)}</b>${ffHasPanel(r.tf)?'':'　<span style="color:var(--text2)">（该周期未开视窗）</span>'}`;
+    });
+    el.addEventListener('click',()=>{
+      if(ffPinned.has(k))ffPinned.delete(k);else ffPinned.add(k);
+      ffApplyHighlight();ffRender();
     });
   });
   rk.addEventListener('mouseleave',()=>{
-    ffClearHighlight();
+    ffHover=null;ffApplyHighlight();
     const rd=document.getElementById('ff-read');
-    if(rd)rd.textContent='鼠标移到柱子上 → 左侧对应周期的视窗会高亮那根线';
+    if(rd)rd.textContent='划过＝临时点亮　点击＝固定点亮（再点取消）';
+  });
+  document.getElementById('ff-all')?.addEventListener('click',()=>{
+    if(allOn)ffPinned.clear();
+    else TOP.forEach(r=>ffPinned.add(ffKeyOf(r)));
+    ffApplyHighlight();ffRender();
   });
 }
 
-// ══ 设置弹窗 ══
 // 设置区就嵌在抽屉底部，点⚙展开/收起（不再是浮动弹窗）
 function toggleFFSet(){
   const box=document.getElementById('ff-set');if(!box)return;
@@ -2274,7 +2299,8 @@ function ffSyncPop(){
   g('ff-sigma').value=Math.round(ffSigma*10); g('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
   g('ff-sigma').disabled=ffCfg.sigmaAuto;
   g('ff-alpha').value=Math.round(ffCfg.alpha*100); g('ff-alpha-v').textContent=ffCfg.alpha.toFixed(2); ffAlphaHint();
-  g('ff-bin').value=Math.round(ffCfg.bin*100); g('ff-bin-v').textContent=ffCfg.bin.toFixed(2)+'%';
+  g('ff-bin').value=Math.round(ffCfg.bin*100);
+  g('ff-bin-v').textContent=ffCfg.bin>0?ffCfg.bin.toFixed(2)+'%':'0（不合并）';
   g('ff-utema').checked=ffCfg.useTema; g('ff-uma').checked=ffCfg.useMa;
   document.querySelectorAll('#ff-presets button').forEach(b=>b.classList.toggle('on',b.dataset.k===ffCfg.preset));
 }
@@ -2310,8 +2336,9 @@ function ffAlphaHint(){
   el.textContent='相对权重　'+ps.map(p=>p+':'+Math.pow(p/pm,ffCfg.alpha).toFixed(2)).join('　');
 }
 function ffSetBin(v){
-  ffCfg.bin=Math.max(0.02,(parseInt(v)||20)/100);
-  document.getElementById('ff-bin-v').textContent=ffCfg.bin.toFixed(2)+'%';
+  ffCfg.bin=Math.max(0,(parseInt(v)||0)/100);
+  document.getElementById('ff-bin-v').textContent=
+    ffCfg.bin>0?ffCfg.bin.toFixed(2)+'%':'0（不合并）';
   ffSaveCfg();ffRender();
 }
 function ffSetUse(k,v){ffCfg[k]=v;ffSaveCfg();ffRecomputeLines();ffRender();}
