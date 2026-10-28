@@ -103,6 +103,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .vm-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:2px;cursor:pointer;font-size:9px;font-weight:700;padding:0 4px;height:16px;line-height:16px;flex-shrink:0;transition:all .12s}
 .vm-btn:hover{border-color:#888;color:var(--text)}
 .vm-btn.on{background:rgba(41,98,255,.25);border-color:var(--blue);color:var(--blue)}
+.mg{font-size:9px;font-weight:700;color:var(--blue);flex-shrink:0}
 .pp{margin-left:auto;font-size:10px;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap;flex-shrink:0}
 /* 视窗右上角的关闭按钮 */
 .pcx{background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:0 2px 0 6px;flex-shrink:0;line-height:1}
@@ -306,6 +307,9 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 
 <!-- ── GLOBAL INDICATOR BAR ── -->
 <div id="ind-bar">
+  <button class="row-btn" id="merge-btn" onclick="toggleMergeLines()"
+    title="归并同跨度趋势线：把大周期里的细线（红橙黄）移到更短周期显示成粗线（蓝青绿），每个跨度只保留最粗的那一根">⇣合并</button>
+  <div class="isep"></div>
   <div class="ma-grp">
     <button class="ma-btn on" data-t="tema" onclick="toggleMA('tema')">TEMA</button>
     <button class="ma-btn"   data-t="ma"   onclick="toggleMA('ma')">MA</button>
@@ -606,6 +610,7 @@ function snapshotSettings(){
     maToggle:{...maToggle},
     inds:sharedInds.map(i=>({...i})),
     rowH:rowHManual?rowH:null,
+    mergeLines,
   };
 }
 function saveSettings(){
@@ -653,6 +658,8 @@ function applySettings(s){
   maToggle=s.maToggle?{tema:!!s.maToggle.tema,ma:!!s.maToggle.ma}:{tema:true,ma:false};
   sharedInds=(s.inds||[]).map(i=>({...i,id:uid()}));
   if(!sharedInds.length)sharedInds=buildIndsFromPeriods(PRESETS.default.emas,true);
+  mergeLines=!!s.mergeLines;
+  document.getElementById('merge-btn')?.classList.toggle('on',mergeLines);
   syncMaBtns();
   renderSharedChips();
   closePresetModal();
@@ -980,6 +987,7 @@ function addPanel(){
   buildDOM(pi);
   loadPanel(pi);
   refreshMinimap();saveSettings();
+  if(mergeLines)setTimeout(redrawAllPanels,50);
 }
 // 关闭单个视窗：保留其余视窗的周期与视图模式，整体重建（自动补位）
 // 说明：视窗的WS/图表回调都以序号绑定，抽走中间一个后序号会错位，
@@ -1031,10 +1039,11 @@ function buildDOM(pi){
   tfsel.onchange=()=>changeTF(pi,tfsel.value);
   const logBtn=document.createElement('button');logBtn.className='vm-btn';logBtn.id=`log-${pi}`;logBtn.textContent='LOG';logBtn.title='对数坐标';logBtn.onclick=()=>toggleLog(pi);
   const invBtn=document.createElement('button');invBtn.className='vm-btn';invBtn.id=`inv-${pi}`;invBtn.textContent='↕';invBtn.title='倒垂视图';invBtn.onclick=()=>toggleInvert(pi);
+  const mg=document.createElement('span');mg.className='mg';mg.id=`mg-${pi}`;
   const pp=document.createElement('span');pp.className='pp';pp.id=`pp-${pi}`;pp.textContent='--';
   const pcx=document.createElement('button');pcx.className='pcx';pcx.textContent='✕';pcx.title='关闭该视窗';
   pcx.onclick=e=>{e.stopPropagation();closePanel(pi);};
-  tb.append(tfsel,logBtn,invBtn,pp,pcx);
+  tb.append(tfsel,logBtn,invBtn,mg,pp,pcx);
   const cw=document.createElement('div');cw.className='cw';cw.id=`cw-${pi}`;
   cw.innerHTML=`<div class="ldg" id="ldg-${pi}"><div class="sp"></div>加载中...</div>`;
   el.append(tb,cw);
@@ -1147,6 +1156,50 @@ async function loadPanel(pi){
 }
 
 // ══════════════════════════════════════════════
+// ⇣ 归并同跨度趋势线
+// 一根均线的身份 = 参数 × 周期 = 覆盖的时间跨度。
+// 同一跨度在不同周期里会重复出现，例如 25天 既是 1d·25（红色细线，
+// 在日线图上几乎看不清），也是 1h·600（蓝色粗线，一目了然）。
+// 开启后：某条线若能在「更短周期的已开视窗」里以「更大参数」呈现，
+// 就在本视窗隐藏它 —— 因为跨度相同时参数越大周期必然越小，
+// 所以每个跨度最终只在最短的那个周期里、以最粗的线保留一次。
+// 效果：大周期视窗只剩蓝青绿（600/400/288），红橙黄下沉到小周期。
+// ══════════════════════════════════════════════
+let mergeLines=false;
+const MERGE_TOL=0.15;              // ★跨度容差 ±15%
+
+function toggleMergeLines(){
+  mergeLines=!mergeLines;
+  document.getElementById('merge-btn')?.classList.toggle('on',mergeLines);
+  redrawAllPanels();
+  saveSettings();
+}
+
+// 本视窗中应被归并掉（隐藏）的指标 id
+function mergeHiddenSet(pi){
+  const p=panels[pi];
+  if(!mergeLines||!p)return null;
+  const inds=sharedInds.filter(i=>i.type==='ma-line'&&!i.hidden&&i.p>0);
+  if(inds.length<2)return null;
+  const myS=tfToSec(p.tf);
+  if(!myS)return null;
+  const lim=Math.log(1+MERGE_TOL);
+  const hide=new Set();
+  // 按参数从小到大处理：红橙黄这类细线优先被移走
+  for(const ind of inds.slice().sort((a,b)=>a.p-b.p)){
+    const span=ind.p*myS;
+    const movable=panels.some(q=>{
+      const qs=tfToSec(q.tf);
+      if(!qs||qs>=myS)return false;                     // 只往更短的周期迁
+      return inds.some(j=>j.p>ind.p &&                  // 且必须是更大参数(更粗)
+        Math.abs(Math.log(j.p*qs/span))<=lim);
+    });
+    if(movable)hide.add(ind.id);
+  }
+  return hide;
+}
+
+// ══════════════════════════════════════════════
 // 在指定视窗上绘制全部指标线
 // TEMA=实线(lineStyle:0)  MA=虚线(lineStyle:2)，同色区分
 // ══════════════════════════════════════════════
@@ -1158,8 +1211,16 @@ function drawAllInds(pi){
   const candles=p.candles,closes=candles.map(c=>c.close),times=candles.map(c=>c.time);
   for(const s of Object.values(p.seriesMap||{})){try{p.chart.removeSeries(s);}catch(_){}}
   p.seriesMap={};
+  const mig=mergeHiddenSet(pi);
+  const mgEl=document.getElementById(`mg-${pi}`);
+  if(mgEl){
+    const n=mig?mig.size:0;
+    mgEl.textContent=n?`⇣${n}`:'';
+    mgEl.title=n?`${n} 条细线已归并到更短周期显示（点顶栏 ⇣合并 可关闭）`:'';
+  }
   for(const ind of sharedInds){
     if(ind.type==='vpvr')continue;
+    if(mig&&mig.has(ind.id))continue;        // 已归并到更短周期，本视窗不再画
     const lw=ind.lw||(ind.p?autoStyle(ind.p).lw:1.5);
     const col=ind.color;
     const vis=!ind.hidden;
@@ -1526,7 +1587,8 @@ function commitPop(){
 // ══════════════════════════════════════════════
 // 视窗交互：切换周期 / 工具条价格显示 / 十字线OHLC显示
 // ══════════════════════════════════════════════
-function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);refreshMinimap();saveSettings();}
+function changeTF(pi,tf){panels[pi].tf=tf;loadPanel(pi);refreshMinimap();saveSettings();
+  if(mergeLines)setTimeout(redrawAllPanels,50);}   // 开的周期变了→归并关系要重算
 function updatePP(pi){
   const p=panels[pi];const last=p.candles?.[p.candles.length-1];if(!last)return;
   if(p.hovering)return;   // ★鼠标悬停时不回写，避免每秒推送把K线信息刷掉（闪烁）
@@ -2421,16 +2483,6 @@ function ffRenderEquiv(){
   const price=ffPrice();
   const dups=ffGroups.filter(g=>g.length>1).sort((a,b)=>b[0].span-a[0].span);
 
-  // 周期冗余：该周期有多少条线能在别的周期找到等效线
-  const stat={};
-  for(const g of ffGroups)for(const l of g){
-    const st=stat[l.tf]=stat[l.tf]||{all:0,cov:0};
-    st.all++;
-    if(g.some(o=>o.tf!==l.tf))st.cov++;
-  }
-  const rd=Object.entries(stat)
-    .map(([tf,v])=>({tf,...v,pct:v.all?v.cov/v.all:0}))
-    .sort((a,b)=>b.pct-a.pct||tfToSec(b.tf)-tfToSec(a.tf));
 
   box.innerHTML='<div class="ffp-sec">等效线（参数×周期=跨度，跨度相同即同一根线）</div>'
     +`<label class="ffp-chk"><input type="checkbox" ${ffCfg.dedup?'checked':''} onchange="ffSetDedup(this.checked)">`
@@ -2449,16 +2501,7 @@ function ffRenderEquiv(){
         }).join('')
       : '<div class="ffc-na">当前没有发现等效线</div>')
     +(dups.length>10?`<div class="ffe-rd">…另有 ${dups.length-10} 组</div>`:'')
-    +'<div class="ffp-sec">周期冗余度</div>'
-    +'<div class="ffe-rd" style="margin-bottom:2px">指的是<b>均线层面</b>的重复；'
-    +'该周期的K线形态本身仍有独立价值，是否关掉由你定。</div>'
-    +'<div class="ffe-rd">'
-    +rd.map(v=>{
-        const p=Math.round(v.pct*100);
-        return `<b>${v.tf}</b> ${v.cov}/${v.all} 条均线在别处有等效 `
-          +(p>=100?'<span class="full">· 均线全部重复</span>':`· ${p}%`);
-      }).join('<br>')
-    +'</div>';
+    +'';
 }
 
 // 设置区就嵌在抽屉底部，点⚙展开/收起（不再是浮动弹窗）
