@@ -210,6 +210,21 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 .ff-read b{color:var(--text);font-size:11px}
 .ff-empty{padding:18px 12px;font-size:11px;color:var(--text2);text-align:center;line-height:1.7}
 
+/* ── 等效线分析区（点⧉展开） ── */
+#ff-equiv{display:none;border-top:1px solid var(--border);background:var(--bg2);padding:9px 10px 11px;flex-direction:column;gap:7px}
+#ff-equiv.show{display:flex}
+.ffe-g{border:1px solid var(--border);border-radius:4px;background:var(--bg);padding:5px 7px;display:flex;flex-direction:column;gap:2px}
+.ffe-t{display:flex;align-items:baseline;gap:6px}
+.ffe-t b{font-size:12px;font-weight:700}
+.ffe-t span{font-size:9px;color:var(--text2)}
+.ffe-t em{margin-left:auto;font-style:normal;font-size:9px;color:var(--text2)}
+.ffe-m{font-size:10px;line-height:1.6}
+.ffe-m .rep{font-weight:700;background:rgba(41,98,255,.14);border-radius:2px;padding:0 3px}
+.ffe-m .dup{color:var(--text2);text-decoration:line-through}
+.ffe-rd{font-size:10px;line-height:1.7;color:var(--text2)}
+.ffe-rd b{color:var(--text)}
+.ffe-rd .full{color:var(--orange);font-weight:700}
+
 /* ── 力场设置区（内嵌在抽屉底部，点⚙展开） ── */
 #ff-set{display:none;border-top:1px solid var(--border);background:var(--bg2);padding:10px 10px 12px;flex-direction:column;gap:8px}
 #ff-set.show{display:flex}
@@ -379,12 +394,14 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
     <div id="ff-hd">
       <span class="ff-t">⚡ 周期力场</span>
       <span class="ff-meta" id="ff-meta">加载中…</span>
+      <span class="ff-ic" id="ff-eq-btn" onclick="toggleFFEquiv()" title="等效线分析：哪些线其实是同一根">⧉</span>
       <span class="ff-ic" id="ff-set-btn" onclick="toggleFFSet()" title="参数设置">⚙</span>
       <span class="ff-ic" style="margin-left:0" onclick="toggleFF()" title="关闭">✕</span>
     </div>
     <div id="ff-body">
       <div id="ff-concl"></div>
       <div id="ff-rank"></div>
+      <div id="ff-equiv"></div>
       <div id="ff-set">
         <div class="ffp-sec">权重预设</div>
         <div class="ffp-presets" id="ff-presets">
@@ -1980,7 +1997,7 @@ const FF_PRESETS={
 
 let ffCfg={
   open:false, width:340, preset:'swing', hours:36,
-  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2, respectW:1.0,
+  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2, respectW:1.0, dedup:true,
   useTema:true, useMa:true,
   weights:{...FF_PRESETS.swing.w},
 };
@@ -2027,7 +2044,7 @@ function ffLoadAll(){
 }
 function ffScheduleRecalc(){
   clearTimeout(_ffRecalcTimer);
-  _ffRecalcTimer=setTimeout(()=>{ffSigma=ffCalcSigma();ffRecomputeLines();ffRender();},400);
+  _ffRecalcTimer=setTimeout(()=>{ffSigma=ffCalcSigma();ffRecomputeLines();ffRender();ffRenderEquiv();},400);
 }
 
 // ── σ：由持仓时长推导（1h收盘价滚动窗口涨跌幅的中位数）──
@@ -2101,7 +2118,7 @@ function ffRecomputeLines(){
         const arr=ffMaSeries(cs,p), v=arr[arr.length-1];
         if(v!=null&&isFinite(v)){
           const rp=ffRespect(cs,arr,FF_WIN);
-          out.push({tf,type:'MA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:true,...rp});
+          out.push({tf,type:'MA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:ind.lw||1.5,value:v,conf:true,...rp});
         }
       }
       if(ffCfg.useTema){
@@ -2109,18 +2126,69 @@ function ffRecomputeLines(){
         // TEMA 需约3倍参数长度才收敛，不足则标低可信
         if(v!=null&&isFinite(v)){
           const rp=ffRespect(cs,arr,FF_WIN);
-          out.push({tf,type:'TEMA',id:ind.id,p,pmax,color:ind.color,lw:ind.lw||1.5,value:v,conf:cs.length>=p*3,...rp});
+          out.push({tf,type:'TEMA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:ind.lw||1.5,value:v,conf:cs.length>=p*3,...rp});
         }
       }
     }
   }
   ffLines=out;
+  ffGroups=ffBuildGroups(ffLines,ffPrice());   // 识别等效线
+}
+
+// ══════════════════════════════════════════════
+// 等效线识别
+// 一根均线真正的身份是「覆盖的时间跨度 = 参数 × 周期」。
+// 例：8h×600 和 12h×400 都是 4800 小时(200天)，就是同一根线；
+//     1h×600 和 1d×25 都是 600 小时(25天)，也是同一根线。
+// 同类型(都是MA或都是TEMA)、跨度相近、当前价位也相近 → 判为等效。
+// 每组推举一个「代表」：参数最大的那条（图上画得最粗最显眼），
+// 参数相同则取周期更小的——正是「去小周期看那根深粗线」。
+// 开启去重后只有代表参与计分，避免同一根线被重复累加。
+// ══════════════════════════════════════════════
+const FF_TOL_SPAN=0.15;   // ★跨度容差 ±15%
+const FF_TOL_PX=0.004;    // ★价位容差下限 0.4%（实际取 max(0.4%, σ×12%) 随波动自适应）
+let ffGroups=[];
+
+function ffSpanTxt(sec){
+  if(sec<3600)return (sec/60).toFixed(0)+'分';
+  if(sec<86400)return (sec/3600).toFixed(sec<36000?1:0)+'小时';
+  if(sec<86400*365)return (sec/86400).toFixed(sec<86400*10?1:0)+'天';
+  return (sec/86400/365).toFixed(1)+'年';
+}
+
+function ffBuildGroups(lines,price){
+  // 同跨度的线因采样粒度不同会有少量价差，容差随当前波动率放宽
+  const tolPx=Math.max(FF_TOL_PX,(ffSigma||3)/100*0.12);
+  const byType={};
+  for(const l of lines)(byType[l.type]=byType[l.type]||[]).push(l);
+  const gs=[];
+  for(const t in byType){
+    const arr=byType[t].slice().sort((a,b)=>a.span-b.span);
+    let cur=[];
+    const flush=()=>{if(cur.length)gs.push(cur);cur=[];};
+    for(const l of arr){
+      if(!cur.length){cur=[l];continue;}
+      const ref=cur[0];
+      const spanOk=Math.abs(Math.log(l.span/ref.span))<=Math.log(1+FF_TOL_SPAN);
+      const pxOk=!price||Math.abs(l.value-ref.value)/price<=tolPx;
+      if(spanOk&&pxOk)cur.push(l);else{flush();cur=[l];}
+    }
+    flush();
+  }
+  // 标记代表：参数最大 → 周期最小
+  gs.forEach((g,gi)=>{
+    g.sort((a,b)=>b.p-a.p||tfToSec(a.tf)-tfToSec(b.tf));
+    g.forEach((l,i)=>{l.gid=gi;l.rep=i===0;l.gn=g.length;});
+  });
+  return gs;
 }
 
 // ── 打分（跟随实时价，极轻量）──
 function ffScoreAll(price){
   const sig=Math.max(0.05,ffSigma), a=ffCfg.alpha, rows=[];
-  for(const L of ffLines){
+  // 去重：等效线只让代表参与，避免同一根线被重复累加
+  const src=ffCfg.dedup?ffLines.filter(l=>l.rep!==false):ffLines;
+  for(const L of src){
     const wtf=(ffCfg.weights[L.tf]??0)/100;
     if(wtf<=0)continue;
     const wp=Math.pow(L.p/L.pmax,a);
@@ -2228,7 +2296,8 @@ function ffRender(){
     const loaded=Object.keys(ffData).length;
     meta.textContent=loaded<FF_TFS.length
       ? `加载中 ${loaded}/${FF_TFS.length}`
-      : `σ ${ffSigma.toFixed(1)}% · ${ffCfg.hours}h · ${ffLines.length} 线`;
+      : `σ ${ffSigma.toFixed(1)}% · ${ffCfg.hours}h · ${ffLines.length} 线`
+        +(ffCfg.dedup?` → 去重 ${ffLines.filter(l=>l.rep!==false).length}`:'');
   }
   if(!price||!ffLines.length){
     cc.innerHTML='<div class="ff-empty">正在拉取 16 个周期的历史数据…<br>首次加载约需几秒</div>';
@@ -2334,6 +2403,62 @@ function ffRender(){
     else TOP.forEach(r=>ffPinned.add(ffKeyOf(r)));
     ffApplyHighlight();ffRender();
   });
+}
+
+// ── 等效线分析面板 ──
+function toggleFFEquiv(){
+  const box=document.getElementById('ff-equiv');if(!box)return;
+  const show=!box.classList.contains('show');
+  box.classList.toggle('show',show);
+  document.getElementById('ff-eq-btn')?.classList.toggle('on',show);
+  if(show){ffRenderEquiv();box.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+function ffSetDedup(v){ffCfg.dedup=v;ffSaveCfg();ffRender();ffRenderEquiv();}
+
+function ffRenderEquiv(){
+  const box=document.getElementById('ff-equiv');
+  if(!box||!box.classList.contains('show'))return;
+  const price=ffPrice();
+  const dups=ffGroups.filter(g=>g.length>1).sort((a,b)=>b[0].span-a[0].span);
+
+  // 周期冗余：该周期有多少条线能在别的周期找到等效线
+  const stat={};
+  for(const g of ffGroups)for(const l of g){
+    const st=stat[l.tf]=stat[l.tf]||{all:0,cov:0};
+    st.all++;
+    if(g.some(o=>o.tf!==l.tf))st.cov++;
+  }
+  const rd=Object.entries(stat)
+    .map(([tf,v])=>({tf,...v,pct:v.all?v.cov/v.all:0}))
+    .sort((a,b)=>b.pct-a.pct||tfToSec(b.tf)-tfToSec(a.tf));
+
+  box.innerHTML='<div class="ffp-sec">等效线（参数×周期=跨度，跨度相同即同一根线）</div>'
+    +`<label class="ffp-chk"><input type="checkbox" ${ffCfg.dedup?'checked':''} onchange="ffSetDedup(this.checked)">`
+    +`<span>合并计分：每组只让最粗的那条参与（避免重复累加）</span></label>`
+    +(dups.length
+      ? dups.slice(0,10).map(g=>{
+          const lo=Math.min(...g.map(l=>l.value)), hi=Math.max(...g.map(l=>l.value));
+          const spread=price?((hi-lo)/price*100):0;
+          return `<div class="ffe-g"><div class="ffe-t"><b>${ffSpanTxt(g[0].span)}</b>`
+            +`<span>${g[0].type}</span><em>价差 ${spread.toFixed(2)}%</em></div>`
+            +`<div class="ffe-m">`
+            +g.map((l,i)=>i===0
+                ? `<span class="rep">${l.tf}·${l.p}</span>`
+                : `<span class="${ffCfg.dedup?'dup':''}">${l.tf}·${l.p}</span>`).join(' ＝ ')
+            +`　→ 看 <b>${g[0].tf}</b> 的 <b>${g[0].p}</b></div></div>`;
+        }).join('')
+      : '<div class="ffc-na">当前没有发现等效线</div>')
+    +(dups.length>10?`<div class="ffe-rd">…另有 ${dups.length-10} 组</div>`:'')
+    +'<div class="ffp-sec">周期冗余度</div>'
+    +'<div class="ffe-rd" style="margin-bottom:2px">指的是<b>均线层面</b>的重复；'
+    +'该周期的K线形态本身仍有独立价值，是否关掉由你定。</div>'
+    +'<div class="ffe-rd">'
+    +rd.map(v=>{
+        const p=Math.round(v.pct*100);
+        return `<b>${v.tf}</b> ${v.cov}/${v.all} 条均线在别处有等效 `
+          +(p>=100?'<span class="full">· 均线全部重复</span>':`· ${p}%`);
+      }).join('<br>')
+    +'</div>';
 }
 
 // 设置区就嵌在抽屉底部，点⚙展开/收起（不再是浮动弹窗）
