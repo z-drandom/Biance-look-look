@@ -1571,7 +1571,7 @@ function startTicker(){
       try{
         const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
         livePrice=price;
-        ffScheduleRender();
+        try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
         document.getElementById('lp').textContent=fmt(price);
         document.getElementById('lp').className=chg>=0?'up':'dn';
         const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
@@ -1767,6 +1767,8 @@ function fmtCNTime(t,sec){
 // ══════════════════════════════════════════════
 // 数字格式化：fmt=价格(≥1万去小数)  fmtV=成交量(K/M/B缩写)
 // ══════════════════════════════════════════════
+// HTML 转义（渲染力场标签等用户可见文本时防止标签注入）
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):v.toFixed(2);}
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
@@ -1921,10 +1923,11 @@ let _ffRenderT=0, _ffRecalcTimer=null;
 
 // ── 配置读写 ──
 function ffLoadCfg(){
-  try{const c=JSON.parse(localStorage.getItem(FF_KEY));
-    if(c)ffCfg={...ffCfg,...c,weights:{...ffCfg.weights,...(c.weights||{})}};
-  }catch(_){}
-  if(!Array.isArray(ffCfg.order)||ffCfg.order.length!==FF_TFS.length)ffSortOrder();
+  let stored=null;
+  try{stored=JSON.parse(localStorage.getItem(FF_KEY));}catch(_){}
+  if(stored)ffCfg={...ffCfg,...stored,weights:{...ffCfg.weights,...(stored.weights||{})}};
+  // 没有存过顺序（首次使用）→ 按权重从大到小排好，拖动排序才有合理起点
+  if(!stored||!Array.isArray(stored.order)||stored.order.length!==FF_TFS.length)ffSortOrder();
 }
 function ffSaveCfg(){try{localStorage.setItem(FF_KEY,JSON.stringify(ffCfg));}catch(_){}}
 function ffSortOrder(){ffCfg.order=[...FF_TFS].sort((a,b)=>(ffCfg.weights[b]||0)-(ffCfg.weights[a]||0));}
