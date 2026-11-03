@@ -270,6 +270,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   #logo{font-size:12px}
   #lp{font-size:16px}
   .hst{display:none}
+  .hst.perp{display:flex}
   /* 指标栏允许横向滑动（标签多时不再被截断） */
   #ind-bar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
   #ind-bar::-webkit-scrollbar{height:0}
@@ -296,7 +297,10 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 <!-- ── HEADER ── -->
 <div id="hdr">
   <div id="logo">₿ BTC/USDT</div>
+  <div class="hst"><span class="hst-l">现货</span></div>
   <span id="lp">--</span><span id="pc">--</span>
+  <div class="hst perp"><span class="hst-l">永续合约</span><span class="hst-v" id="pp-perp" style="font-size:14px">--</span></div>
+  <div class="hst perp"><span class="hst-l">合约−现货</span><span class="hst-v" id="pp-basis">--</span></div>
   <div class="hst"><span class="hst-l">24H 高</span><span class="hst-v" id="shi" style="color:var(--green)">--</span></div>
   <div class="hst"><span class="hst-l">24H 低</span><span class="hst-v" id="slo" style="color:var(--red)">--</span></div>
   <div class="hst"><span class="hst-l">24H 量</span><span class="hst-v" id="svol">--</span></div>
@@ -1732,6 +1736,7 @@ function startTicker(){
         const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
         livePrice=price;
         try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
+        updateBasis();
         document.getElementById('lp').textContent=fmt(price);
         document.getElementById('lp').className=chg>=0?'up':'dn';
         const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
@@ -1739,6 +1744,35 @@ function startTicker(){
         document.getElementById('slo').textContent=fmt(+d.l);
         document.getElementById('svol').textContent=fmtV(+d.v);
         retry=1000;
+      }catch(_){}
+    };
+    ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
+    ws.onerror=()=>ws.close();
+  }
+  conn();
+}
+// ── 永续合约实时价（币安 U本位 BTCUSDT 永续）──
+// 顶栏同时显示 合约−现货 价差：正=合约溢价，负=合约折价
+let perpPrice=null;
+function updateBasis(){
+  const el=document.getElementById('pp-basis');
+  if(!el||!perpPrice||!livePrice)return;
+  const d=perpPrice-livePrice, pct=d/livePrice*100;
+  el.textContent=`${d>=0?'+':''}${d.toFixed(1)} (${pct>=0?'+':''}${pct.toFixed(3)}%)`;
+  el.style.color=d>=0?'var(--green)':'var(--red)';
+}
+function startPerpTicker(){
+  let retry=1000;
+  function conn(){
+    const ws=new WebSocket('wss://fstream.binance.com/ws/btcusdt@miniTicker');
+    ws.onmessage=evt=>{
+      try{
+        const d=JSON.parse(evt.data);
+        perpPrice=+d.c;
+        const chg=(perpPrice-+d.o)/+d.o*100;
+        const el=document.getElementById('pp-perp');
+        if(el){el.textContent=fmt(perpPrice);el.style.color=chg>=0?'var(--green)':'var(--red)';}
+        updateBasis();retry=1000;
       }catch(_){}
     };
     ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
@@ -2658,7 +2692,7 @@ function ffInit(){
 // ══════════════════════════════════════════════
 function bootCommon(){
   new ResizeObserver(resizeAll).observe(document.getElementById('scroll-wrap'));
-  startTicker();fetchFR();fetchOI();
+  startTicker();startPerpTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>panels.forEach((_,i)=>schedVPVR(i)),600);
   loadAlertCfg();
