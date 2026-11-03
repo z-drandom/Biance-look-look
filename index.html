@@ -204,11 +204,12 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
             min-width:34px;text-align:center;flex-shrink:0}
 .ff-rk .ff-ln{width:28px;flex-shrink:0;align-self:center}
 .ff-rk .nm{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ff-rk .cs{font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:3px;padding:0 4px;flex-shrink:0}
 .ff-rk .vl{font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums}
 .ff-rk .sc{margin-left:auto;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .ff-rk.sup .sc{color:var(--blue)}
 .ff-rk.res .sc{color:var(--red)}
-.ff-read{font-size:10px;color:var(--text2);min-height:28px;line-height:1.5;margin-top:2px}
+.ff-read{font-size:10px;color:var(--text2);min-height:42px;line-height:1.5;margin-top:2px}
 .ff-read b{color:var(--text);font-size:11px}
 .ff-empty{padding:18px 12px;font-size:11px;color:var(--text2);text-align:center;line-height:1.7}
 
@@ -441,6 +442,13 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
         <div class="ffp-hint">价格反复来回穿越的均线会被降权——那种线不是支撑/压力，
           只是跟着价格跑。统计最近 400 根K线里该线被测试时<b>守住</b>还是<b>被击穿</b>。
           调 0 = 关闭此项，只看距离。</div>
+        <div class="ffp-row">
+          <span class="lb">多周期共识</span>
+          <input type="range" id="ff-cons" min="0" max="100" step="5" value="70" oninput="ffSetCons(this.value)">
+          <span class="vv" id="ff-cons-v">70%</span>
+        </div>
+        <div class="ffp-hint" id="ff-cons-hint">多个周期其实是同一根线（等效线）合并后，力量比单根线更大。
+          按合并条数取对数加成，越多加得越慢。需在 ⧉ 里开启「合并计分」。</div>
         <div class="ffp-row">
           <span class="lb">共振箱宽</span>
           <input type="range" id="ff-bin" min="0" max="150" step="1" oninput="ffSetBin(this.value)">
@@ -2074,13 +2082,18 @@ async function checkAmplitude(){
 // 均线此刻位置，按三项权重算出它对现价的支撑/压力强度，
 // 再把相近价位的线合并成「共振区」。
 //
-//   力量分 = W周期 × W参数 × W距离 × W有效 × 100
+//   力量分 = W周期 × W参数 × W距离 × W有效 × W共识 × 100
 //     W周期 = 用户设定(0~100)/100      ← 弹窗里可拖动排序 + 逐个微调
 //     W参数 = (参数/最大参数)^α        α默认2.0，均线参数越大权重越高，
 //                                      且差距悬殊：600约为400的2.2倍、200的9倍
 //     W距离 = 1/(1+(d/σ)²)            柯西衰减：平滑、永不归零、无截断
 //                                      d=距现价百分比；σ=半权距离
 //                                      （距离恰为σ时权重正好砍半）
+//     W共识 = 1 + k×ln(合并条数)      多个周期其实是同一根线(等效线)时，
+//                                      合并后的代表线力量更大：看它的人更多。
+//                                      取对数：边际递减，不会像直接相加那样重复计数。
+//                                      k=0.5×强度，默认强度70%→k=0.35：
+//                                      2条×1.24  3条×1.38  4条×1.49  5条×1.56
 //     W有效 = 1+(2×有效性−1)×强度   「这根线历史上扛不扛得住」
 //                                      有效性=(守住+1)/(守住+击穿+2)
 //                                      价格反复穿越的线会被大幅降权——
@@ -2111,7 +2124,7 @@ const FF_PRESETS={
 
 let ffCfg={
   open:false, width:340, preset:'swing', hours:36,
-  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2, respectW:1.0, dedup:true,
+  sigmaAuto:true, sigma:3.0, alpha:2.0, bin:0.2, respectW:1.0, dedup:true, consensus:0.7,
   useTema:true, useMa:true,
   weights:{...FF_PRESETS.swing.w},
 };
@@ -2292,7 +2305,8 @@ function ffBuildGroups(lines,price){
   // 标记代表：参数最大 → 周期最小
   gs.forEach((g,gi)=>{
     g.sort((a,b)=>b.p-a.p||tfToSec(a.tf)-tfToSec(b.tf));
-    g.forEach((l,i)=>{l.gid=gi;l.rep=i===0;l.gn=g.length;});
+    const mem=g.map(x=>`${x.tf}·${x.p}`);
+    g.forEach((l,i)=>{l.gid=gi;l.rep=i===0;l.gn=g.length;l.members=mem;});
   });
   return gs;
 }
@@ -2310,9 +2324,11 @@ function ffScoreAll(price){
     const r=d/sig, wd=1/(1+r*r);
     // 反复被价格穿越的线大幅降权：近不等于有效
     const wr=1+(2*(L.respect??.5)-1)*(ffCfg.respectW??1);
-    let s=wtf*wp*wd*wr*100;
+    // 多周期共识：仅在开启合并时给代表线加成（不合并时各线已各自计分，再加就是重复）
+    const wc=(ffCfg.dedup&&L.gn>1)?1+0.5*(ffCfg.consensus??.7)*Math.log(L.gn):1;
+    let s=wtf*wp*wd*wr*wc*100;
     if(!L.conf)s*=0.5;                          // 低可信线减半
-    rows.push({...L,d,rel:(L.value-price)/price*100,score:s});
+    rows.push({...L,d,wc,rel:(L.value-price)/price*100,score:s});
   }
   rows.sort((x,y)=>y.score-x.score);
   return rows;
@@ -2474,6 +2490,8 @@ function ffRender(){
     const pc=Math.round((r.respect??.5)*100), t=(r.B||0)+(r.X||0);
     return t?`有效性 ${pc}%（测试${t}次·守住${r.B}·击穿${r.X}）`:`有效性 ${pc}%（未被测试过）`;
   };
+  const csTxt=r=>(r.wc>1&&r.members)?`多周期共识 ×${r.wc.toFixed(2)}（${r.gn}条同一根线：${r.members.join(' ＝ ')}）`:'';
+  const csTag=r=>(r.wc>1)?`<span class="cs" title="${escHtml(csTxt(r))}">×${r.gn}</span>`:'';
   const warn=r=>(r.respect??.5)<0.35?'<span title="价格反复穿越，此线作为支撑/压力基本失效" style="color:var(--orange)">⚠</span>':'';
   const allOn=TOP.length>0&&TOP.every(r=>ffPinned.has(ffKeyOf(r)));
   rk.innerHTML='<div class="ff-lg"><span>力量排行</span>'
@@ -2483,10 +2501,10 @@ function ffRender(){
     +TOP.map(r=>{
       const sup=r.rel<=0, k=ffKeyOf(r);
       return `<div class="ff-rk ${sup?'sup':'res'}${ffPinned.has(k)?' pin':''}" data-k="${k}"`
-        +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}\n${rpTxt(r)}${r.conf?'':'\n（低可信：历史不足）'}\n点击可固定点亮`)}"`
+        +` title="${escHtml(`${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　${r.rel>=0?'+':''}${r.rel.toFixed(2)}%　力量 ${r.score.toFixed(1)}\n${rpTxt(r)}${csTxt(r)?'\n'+csTxt(r):''}${r.conf?'':'\n（低可信：历史不足）'}\n点击可固定点亮`)}"`
         +`${r.conf?'':' style="opacity:.6"'}>`
         +`<span class="tfb">${r.tf}</span>`+lnOf(r)
-        +`<span class="nm">${r.p}</span>`+warn(r)
+        +`<span class="nm">${r.p}</span>`+csTag(r)+warn(r)
         +`<span class="vl">${(r.rel>=0?'+':'')+r.rel.toFixed(1)}%</span>`
         +`<span class="sc">${r.score.toFixed(0)}</span></div>`;
     }).join('')
@@ -2501,7 +2519,8 @@ function ffRender(){
       if(r&&rd)rd.innerHTML=`<b>${r.tf} ${r.type}(${r.p})</b>　${fmt(r.value)}　`
         +`<span style="color:${r.rel<=0?'var(--blue)':'var(--red)'}">${r.rel>=0?'+':''}${r.rel.toFixed(2)}%</span>`
         +`　力量 <b>${r.score.toFixed(1)}</b>`
-        +`<br>${escHtml(rpTxt(r))}${ffHasPanel(r.tf)?'':'　（该周期未开视窗）'}`;
+        +`<br>${escHtml(rpTxt(r))}${ffHasPanel(r.tf)?'':'　（该周期未开视窗）'}`
+        +(csTxt(r)?`<br>${escHtml(csTxt(r))}`:'');
     });
     el.addEventListener('click',()=>{
       if(ffPinned.has(k))ffPinned.delete(k);else ffPinned.add(k);
@@ -2528,7 +2547,7 @@ function toggleFFEquiv(){
   document.getElementById('ff-eq-btn')?.classList.toggle('on',show);
   if(show){ffRenderEquiv();box.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
-function ffSetDedup(v){ffCfg.dedup=v;ffSaveCfg();ffRender();ffRenderEquiv();}
+function ffSetDedup(v){ffCfg.dedup=v;ffSaveCfg();ffRender();ffRenderEquiv();ffConsHint();}
 
 function ffRenderEquiv(){
   const box=document.getElementById('ff-equiv');
@@ -2574,6 +2593,8 @@ function ffSyncPop(){
   g('ff-sigma').value=Math.round(ffSigma*10); g('ff-sigma-v').textContent=ffSigma.toFixed(1)+'%';
   g('ff-sigma').disabled=ffCfg.sigmaAuto;
   g('ff-alpha').value=Math.round(ffCfg.alpha*100); g('ff-alpha-v').textContent=ffCfg.alpha.toFixed(2); ffAlphaHint();
+  g('ff-cons').value=Math.round((ffCfg.consensus??.7)*100);
+  g('ff-cons-v').textContent=Math.round((ffCfg.consensus??.7)*100)+'%';ffConsHint();
   g('ff-resp').value=Math.round((ffCfg.respectW??1)*100);
   g('ff-resp-v').textContent=Math.round((ffCfg.respectW??1)*100)+'%';
   g('ff-bin').value=Math.round(ffCfg.bin*100);
@@ -2611,6 +2632,18 @@ function ffAlphaHint(){
   if(!ps.length){el.textContent='';return;}
   const pm=Math.max(...ps);
   el.textContent='相对权重　'+ps.map(p=>p+':'+Math.pow(p/pm,ffCfg.alpha).toFixed(2)).join('　');
+}
+function ffSetCons(v){
+  ffCfg.consensus=Math.max(0,Math.min(1,(parseInt(v)||0)/100));
+  document.getElementById('ff-cons-v').textContent=Math.round(ffCfg.consensus*100)+'%';
+  ffConsHint();ffSaveCfg();ffRender();
+}
+function ffConsHint(){
+  const el=document.getElementById('ff-cons-hint');if(!el)return;
+  const k=0.5*(ffCfg.consensus??.7);
+  el.innerHTML='多个周期其实是同一根线（等效线）合并后，力量比单根线更大，越多加得越慢：<br>'
+    +[1,2,3,4,5].map(n=>`${n}条 ×${(1+k*Math.log(n)).toFixed(2)}`).join('　')
+    +(ffCfg.dedup?'':'<br><b>当前未开启 ⧉ 合并计分，此项不生效</b>');
 }
 function ffSetResp(v){
   ffCfg.respectW=Math.max(0,Math.min(1,(parseInt(v)||0)/100));
