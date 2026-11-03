@@ -304,13 +304,13 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
     <button class="ma-btn" id="mk-perp" onclick="setMarket('perp')">合约</button>
     <button class="ma-btn" id="mk-spot" onclick="setMarket('spot')">现货</button>
   </div>
-  <div class="hst"><span class="hst-l" id="lb-spot">现货</span></div>
+  <div class="hst"><span class="hst-l act" id="lb-main">永续合约</span></div>
   <span id="lp">--</span><span id="pc">--</span>
-  <div class="hst perp"><span class="hst-l" id="lb-perp">永续合约</span><span class="hst-v" id="pp-perp" style="font-size:14px">--</span></div>
+  <div class="hst perp"><span class="hst-l" id="lb-sub">现货</span><span class="hst-v" id="pp-sub" style="font-size:14px">--</span></div>
   <div class="hst perp"><span class="hst-l">合约−现货</span><span class="hst-v" id="pp-basis">--</span></div>
   <div class="hst"><span class="hst-l">24H 高</span><span class="hst-v" id="shi" style="color:var(--green)">--</span></div>
   <div class="hst"><span class="hst-l">24H 低</span><span class="hst-v" id="slo" style="color:var(--red)">--</span></div>
-  <div class="hst"><span class="hst-l">24H 量</span><span class="hst-v" id="svol">--</span></div>
+  <div class="hst"><span class="hst-l">24H 量(BTC)</span><span class="hst-v" id="svol">--</span></div>
   <div class="hst"><span class="hst-l">资金费率</span><span class="hst-v" id="sfr">--</span></div>
   <div class="hst"><span class="hst-l">未平仓</span><span class="hst-v" id="soi">--</span></div>
   <div id="dot"></div>
@@ -1171,7 +1171,7 @@ async function loadPanel(pi){
       timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1,tickMarkFormatter:cnTick},
       handleScroll:true,handleScale:true,
     });
-    p.candleSeries=p.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
+    p.candleSeries=p.chart.addCandlestickSeries({priceFormat:{type:'price',precision:isPerpTF(p.tf)?1:2,minMove:isPerpTF(p.tf)?0.1:0.01},upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
     p.candleSeries.setData(candles);
     // 首屏默认视野（双击外视窗可随时恢复到这个状态）
     resetPanelView(pi);
@@ -1755,22 +1755,58 @@ function closePanelWS(p){
   p.wsGen=(p.wsGen||0)+1;
   if(p.ws){try{p.ws.close();}catch(_){}p.ws=null;}
 }
-function startTicker(){
+// ══════════════════════════════════════════════
+// 顶栏行情：现货与永续各开一条组合流
+//   aggTrade   = 每笔成交，用来刷新最新价（和币安App一样实时）
+//   miniTicker = 每秒一次的24小时汇总（涨跌幅/高/低/量）
+// 顶栏大号价格 = 当前所选数据源；另一个市场显示在旁边小号
+// ══════════════════════════════════════════════
+const MK={spot:{last:null,o:null,h:null,l:null,v:null},perp:{last:null,o:null,h:null,l:null,v:null}};
+const MK_NAME={perp:'永续合约',spot:'现货'};
+// 价格位数与币安一致：合约 0.1，现货 0.01
+const fmtPx=(v,m)=>v==null?'--':v.toLocaleString('en-US',{minimumFractionDigits:m==='perp'?1:2,maximumFractionDigits:m==='perp'?1:2});
+let _hdrT=null;
+function schedHeader(){if(!_hdrT)_hdrT=setTimeout(()=>{_hdrT=null;renderHeader();},80);}  // 节流 80ms
+function renderHeader(){
+  const m=market, o=m==='perp'?'spot':'perp', a=MK[m], b=MK[o];
+  const $=id=>document.getElementById(id);
+  $('lb-main').textContent=MK_NAME[m];
+  $('lb-sub').textContent=MK_NAME[o];
+  if(a.last!=null){
+    const chg=a.o?(a.last-a.o)/a.o*100:0;
+    $('lp').textContent=fmtPx(a.last,m);$('lp').className=chg>=0?'up':'dn';
+    if(a.o){$('pc').textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';$('pc').className=chg>=0?'up':'dn';}
+  }
+  if(a.h!=null){$('shi').textContent=fmtPx(a.h,m);$('slo').textContent=fmtPx(a.l,m);$('svol').textContent=fmtV(a.v);}
+  if(b.last!=null){
+    const el=$('pp-sub');el.textContent=fmtPx(b.last,o);
+    el.style.color=b.o&&b.last<b.o?'var(--red)':'var(--green)';
+  }
+  updateBasis();
+}
+function updateBasis(){
+  const el=document.getElementById('pp-basis');
+  if(!el||!perpPrice||!livePrice)return;
+  const d=perpPrice-livePrice, pct=d/livePrice*100;
+  el.textContent=`${d>=0?'+':''}${d.toFixed(1)} (${pct>=0?'+':''}${pct.toFixed(3)}%)`;
+  el.style.color=d>=0?'var(--green)':'var(--red)';
+}
+function startMarketStream(m){
+  const url=m==='perp'
+    ? 'wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@miniTicker'
+    : 'wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@miniTicker';
   let retry=1000;
   function conn(){
-    const ws=new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@miniTicker');
+    const ws=new WebSocket(url);
     ws.onmessage=evt=>{
       try{
-        const d=JSON.parse(evt.data);const price=+d.c,chg=(price-+d.o)/+d.o*100;
-        livePrice=price;
-        try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
-        updateBasis();
-        document.getElementById('lp').textContent=fmt(price);
-        document.getElementById('lp').className=chg>=0?'up':'dn';
-        const ce=document.getElementById('pc');ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';ce.className=chg>=0?'up':'dn';
-        document.getElementById('shi').textContent=fmt(+d.h);
-        document.getElementById('slo').textContent=fmt(+d.l);
-        document.getElementById('svol').textContent=fmtV(+d.v);
+        const msg=JSON.parse(evt.data), d=msg.data||msg, st=msg.stream||'';
+        const S=MK[m];
+        if(st.includes('aggTrade')||d.e==='aggTrade'){S.last=+d.p;}
+        else{S.o=+d.o;S.h=+d.h;S.l=+d.l;S.v=+d.v;if(S.last==null)S.last=+d.c;}  // 汇总流只在还没收到成交时兜底给价
+        if(m==='spot')livePrice=S.last;else perpPrice=S.last;
+        schedHeader();
+        if(m===market)try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
         retry=1000;
       }catch(_){}
     };
@@ -1779,12 +1815,14 @@ function startTicker(){
   }
   conn();
 }
+function startTicker(){startMarketStream('spot');startMarketStream('perp');}
+let perpPrice=null;
+
 // ── 切换 K线数据源（合约 / 现货）──
 function syncMarketBtns(){
   document.getElementById('mk-perp')?.classList.toggle('on',market==='perp');
   document.getElementById('mk-spot')?.classList.toggle('on',market==='spot');
-  document.getElementById('lb-perp')?.classList.toggle('act',market==='perp');
-  document.getElementById('lb-spot')?.classList.toggle('act',market==='spot');
+  renderHeader();
 }
 function setMarket(m){
   if(m!=='perp'&&m!=='spot')return;
@@ -1796,37 +1834,6 @@ function setMarket(m){
   saveSettings();
 }
 
-// ── 永续合约实时价（币安 U本位 BTCUSDT 永续）──
-// 顶栏同时显示 合约−现货 价差：正=合约溢价，负=合约折价
-let perpPrice=null;
-function updateBasis(){
-  const el=document.getElementById('pp-basis');
-  if(!el||!perpPrice||!livePrice)return;
-  const d=perpPrice-livePrice, pct=d/livePrice*100;
-  el.textContent=`${d>=0?'+':''}${d.toFixed(1)} (${pct>=0?'+':''}${pct.toFixed(3)}%)`;
-  el.style.color=d>=0?'var(--green)':'var(--red)';
-}
-function startPerpTicker(){
-  let retry=1000;
-  function conn(){
-    const ws=new WebSocket('wss://fstream.binance.com/ws/btcusdt@miniTicker');
-    ws.onmessage=evt=>{
-      try{
-        const d=JSON.parse(evt.data);
-        perpPrice=+d.c;
-        const chg=(perpPrice-+d.o)/+d.o*100;
-        const el=document.getElementById('pp-perp');
-        if(el){el.textContent=fmt(perpPrice);el.style.color=chg>=0?'var(--green)':'var(--red)';}
-        updateBasis();
-        if(market==='perp')try{ffScheduleRender();}catch(_){}
-        retry=1000;
-      }catch(_){}
-    };
-    ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
-    ws.onerror=()=>ws.close();
-  }
-  conn();
-}
 async function fetchFR(){try{const r=await fetch(`${FAPI}/premiumIndex?symbol=${SYM}`);const d=await r.json();const fr=+d.lastFundingRate*100;const el=document.getElementById('sfr');el.textContent=(fr>=0?'+':'')+fr.toFixed(4)+'%';el.style.color=fr>=0?'var(--green)':'var(--red)';}catch(_){}}
 async function fetchOI(){try{const r=await fetch(`${FAPI}/openInterest?symbol=${SYM}`);const d=await r.json();document.getElementById('soi').textContent=fmtV(+d.openInterest);}catch(_){}}
 
@@ -2018,7 +2025,8 @@ function fmtCNTime(t,sec){
 // ══════════════════════════════════════════════
 // HTML 转义（渲染力场标签等用户可见文本时防止标签注入）
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fmt(v){return v>=10000?v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):v.toFixed(2);}
+// 价格：≥1000 保留1位小数（与币安合约精度一致，不再四舍五入成整数），否则2位
+function fmt(v){return v>=1000?v.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1}):v.toFixed(2);}
 function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(2)+'B';if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 
 // ══════════════════════════════════════════════
@@ -2740,7 +2748,7 @@ function ffInit(){
 function bootCommon(){
   new ResizeObserver(resizeAll).observe(document.getElementById('scroll-wrap'));
   syncMarketBtns();
-  startTicker();startPerpTicker();fetchFR();fetchOI();
+  startTicker();fetchFR();fetchOI();
   setInterval(()=>{fetchFR();fetchOI();},30000);
   setInterval(()=>panels.forEach((_,i)=>schedVPVR(i)),600);
   loadAlertCfg();
