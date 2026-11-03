@@ -75,10 +75,9 @@ jobs:
               raise SystemExit(0)
 
           # ── 取行情数据 ──
-          # 注意：GitHub Actions 的服务器在美国，api.binance.com 会返回
-          # HTTP 451（地域封锁）。这里优先用币安官方公开数据镜像
-          # data-api.binance.vision（专供公共行情，不限地域），
-          # 并准备 OKX / Coinbase 两个备用源，任一可用即可。
+          # 看盘台只看「币安 U本位永续 BTCUSDT」，所以优先取合约K线。
+          # GitHub Actions 服务器在美国，币安可能按地域拒绝(HTTP 451)；
+          # 取不到时才退回现货镜像，并在邮件里注明数据源，不混淆。
           def fetch_json(u, timeout=20):
               req = urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
               with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -87,33 +86,17 @@ jobs:
           def get_klines():
               """返回最近3根1小时K线 [(开盘毫秒, 开, 高, 低, 收), ...]，时间从旧到新"""
               errs = []
-              # ① 币安系（镜像优先）
-              for host in ('https://data-api.binance.vision',
-                           'https://api.binance.com'):
+              srcs = [
+                  ('币安永续合约', 'https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=3'),
+                  ('币安现货(备用)', 'https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=3'),
+              ]
+              for name, url in srcs:
                   try:
-                      d = fetch_json(f'{host}/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=3')
+                      d = fetch_json(url)
                       return [(int(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]))
-                              for x in d], host
+                              for x in d], name
                   except Exception as e:
-                      errs.append(f'{host} → {type(e).__name__}: {e}')
-              # ② OKX 兜底（返回新→旧，需反转）
-              try:
-                  d = fetch_json('https://www.okx.com/api/v5/market/candles'
-                                 '?instId=BTC-USDT&bar=1H&limit=3')
-                  rows = list(reversed(d['data']))
-                  return [(int(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]))
-                          for x in rows], 'okx'
-              except Exception as e:
-                  errs.append(f'okx → {type(e).__name__}: {e}')
-              # ③ Coinbase 兜底（新→旧，秒级时间，字段序 time,low,high,open,close,volume）
-              try:
-                  d = fetch_json('https://api.exchange.coinbase.com/products/'
-                                 'BTC-USDT/candles?granularity=3600')
-                  rows = list(reversed(d[:3]))
-                  return [(int(x[0]) * 1000, float(x[3]), float(x[2]), float(x[1]), float(x[4]))
-                          for x in rows], 'coinbase'
-              except Exception as e:
-                  errs.append(f'coinbase → {type(e).__name__}: {e}')
+                      errs.append(f'{name} → {type(e).__name__}: {e}')
               raise RuntimeError('所有行情源均不可用：\n  ' + '\n  '.join(errs))
 
           k, src = get_klines()
@@ -141,13 +124,13 @@ jobs:
                + datetime.timedelta(hours=8))
           hour_cn = f'{t:%m月%d日 %H:00}'
           title = f'⚠️ BTC振幅预警 {amp:.2f}%'
-          body = (f"BTC {hour_cn}（北京时间）这根小时K线\n\n"
+          body = (f"BTCUSDT {hour_cn}（北京时间）这根小时K线　数据源：{src}\n\n"
                   f"振幅　{amp:.2f}%   （阈值 {th}%）\n"
                   f"涨跌　{chg:+.2f}%\n\n"
-                  f"开盘　{o:,.0f}\n"
-                  f"最高　{high:,.0f}\n"
-                  f"最低　{low:,.0f}\n"
-                  f"收盘　{close:,.0f}\n\n"
+                  f"开盘　{o:,.1f}\n"
+                  f"最高　{high:,.1f}\n"
+                  f"最低　{low:,.1f}\n"
+                  f"收盘　{close:,.1f}\n\n"
                   f"看盘台：https://z-drandom.github.io/Biance-look-look/")
           if amp < th:
               title = '【手动测试】' + title
