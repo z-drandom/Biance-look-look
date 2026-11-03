@@ -625,7 +625,7 @@ function buildIndsFromPeriods(periods,vpvr){
   const inds=[];
   periods.forEach((p,i)=>{
     const color=i<EMA_RAMP.length?EMA_RAMP[i].color:PALETTE[i%PALETTE.length];
-    const lw=i<EMA_RAMP.length?EMA_RAMP[i].lw:1.5;
+    const lw=lwOf(p);
     const fs=i<EMA_RAMP.length?EMA_RAMP[i].fs:10;
     inds.push({id:uid(),type:'ma-line',p,color,lw,fs,hidden:false});
   });
@@ -773,7 +773,33 @@ function hexRgba(hex,op){
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return`rgba(${r},${g},${b},${op})`;
 }
-function autoStyle(p){const t=Math.min(1,Math.log10(p+1)/Math.log10(2001));return{lw:.5+t*2.2,op:.3+t*.7};}
+// ── 指标线粗细：只由参数数字决定 ──
+// 锚点之间按对数插值；原有6档保持原样，600以上增速放缓，
+// 1200≈3.2px、7200≈3.7px，再大也封顶 4px，不会粗得离谱
+// ★想调粗细就改这张表（参数, 线宽px）
+const LW_ANCHORS=[[25,.7],[99,1.0],[200,1.45],[288,1.85],[400,2.3],[600,2.8],[1200,3.2],[7200,3.7]];
+const LW_MIN=.6, LW_MAX=4.0;
+function lwOf(p){
+  if(!(p>0))return 1.5;
+  const A=LW_ANCHORS, x=Math.log(p);
+  let i=1;
+  while(i<A.length-1&&p>A[i][0])i++;                 // 落在哪一段（两端沿端段斜率外推）
+  const [p0,w0]=A[i-1],[p1,w1]=A[i];
+  const w=w0+(w1-w0)*(x-Math.log(p0))/(Math.log(p1)-Math.log(p0));
+  return Math.max(LW_MIN,Math.min(LW_MAX,w));
+}
+// ── 实线(TEMA) / 虚线(MA) 视觉平衡 ──
+// 同样宽度下虚线约一半是空隙，看起来比实线轻得多。
+// 平衡做法：虚线改用「长虚线」(着墨更多)并加宽约35%；实线略降不透明度。
+// 仍然一根实线、一根虚线，颜色相同。
+// ★MA_W_MUL/MA_W_ADD 调虚线加宽幅度，TEMA_ALPHA 调实线浓淡
+const MA_W_MUL=1.35, MA_W_ADD=.2, TEMA_ALPHA=.82;
+function lineLook(ind,type){
+  const w=lwOf(ind.p);
+  return type==='MA'
+    ? {lineWidth:+Math.min(5,w*MA_W_MUL+MA_W_ADD).toFixed(2),lineStyle:3,color:ind.color}
+    : {lineWidth:+w.toFixed(2),lineStyle:0,color:hexRgba(ind.color,TEMA_ALPHA)};
+}
 function indLabel(ind){
   if(ind.type==='ma-line')return`${ind.p}`;
   if(ind.type==='bb')return`BB(${ind.p},${ind.m||2})`;
@@ -1201,7 +1227,7 @@ function mergeHiddenSet(pi){
 
 // ══════════════════════════════════════════════
 // 在指定视窗上绘制全部指标线
-// TEMA=实线(lineStyle:0)  MA=虚线(lineStyle:2)，同色区分
+// TEMA=实线  MA=长虚线，同色区分；粗细与实虚平衡见 lwOf / lineLook
 // ══════════════════════════════════════════════
 function toLD(arr,times){return arr.map((v,i)=>v!=null?{time:times[i],value:v}:null).filter(Boolean);}
 
@@ -1221,13 +1247,13 @@ function drawAllInds(pi){
   for(const ind of sharedInds){
     if(ind.type==='vpvr')continue;
     if(mig&&mig.has(ind.id))continue;        // 已归并到更短周期，本视窗不再画
-    const lw=ind.lw||(ind.p?autoStyle(ind.p).lw:1.5);
+    const lw=ind.p?lwOf(ind.p):1.5;
     const col=ind.color;
     const vis=!ind.hidden;
     const ln=(c=col,w=lw,style=0)=>p.chart.addLineSeries({color:c,lineWidth:w,lineStyle:style,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,visible:vis});
     if(ind.type==='ma-line'){
-      if(maToggle.tema){const s=ln(col,lw,0);s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id+'_tema']=s;}
-      if(maToggle.ma){const s=ln(col,lw,2);s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id+'_ma']=s;}
+      if(maToggle.tema){const k=lineLook(ind,'TEMA');const s=ln(k.color,k.lineWidth,k.lineStyle);s.setData(toLD(calcTEMA(closes,ind.p),times));p.seriesMap[ind.id+'_tema']=s;}
+      if(maToggle.ma){const k=lineLook(ind,'MA');const s=ln(k.color,k.lineWidth,k.lineStyle);s.setData(toLD(calcMA(closes,ind.p),times));p.seriesMap[ind.id+'_ma']=s;}
     }else if(ind.type==='bb'){
       const b=calcBB(closes,ind.p,ind.m||2);
       const sm=ln(col,lw),su=ln(hexRgba(col,.5),Math.max(.5,lw-.4)),sl=ln(hexRgba(col,.5),Math.max(.5,lw-.4));
@@ -2180,7 +2206,7 @@ function ffRecomputeLines(){
         const arr=ffMaSeries(cs,p), v=arr[arr.length-1];
         if(v!=null&&isFinite(v)){
           const rp=ffRespect(cs,arr,FF_WIN);
-          out.push({tf,type:'MA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:ind.lw||1.5,value:v,conf:true,...rp});
+          out.push({tf,type:'MA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:lwOf(ind.p),value:v,conf:true,...rp});
         }
       }
       if(ffCfg.useTema){
@@ -2188,7 +2214,7 @@ function ffRecomputeLines(){
         // TEMA 需约3倍参数长度才收敛，不足则标低可信
         if(v!=null&&isFinite(v)){
           const rp=ffRespect(cs,arr,FF_WIN);
-          out.push({tf,type:'TEMA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:ind.lw||1.5,value:v,conf:cs.length>=p*3,...rp});
+          out.push({tf,type:'TEMA',id:ind.id,p,pmax,span:p*tfToSec(tf),color:ind.color,lw:lwOf(ind.p),value:v,conf:cs.length>=p*3,...rp});
         }
       }
     }
@@ -2308,13 +2334,14 @@ function ffApplyHighlight(){
     if(!hit.length)return;                    // 该视窗没有被点亮的线 → 原样不动
     for(const [sk,sr] of Object.entries(p.seriesMap||{})){
       const ind=sharedInds.find(i=>sk.startsWith(i.id));
-      if(!ind)continue;
+      if(!ind||ind.type!=='ma-line')continue;
+      const look=lineLook(ind,sk.endsWith('_ma')?'MA':'TEMA');
       const on=hit.some(r=>sk===r.id+(r.type==='TEMA'?'_tema':'_ma'));
       if(on){                                 // 被点亮：加粗突出
-        _ffHi.push([sr,{lineWidth:ind.lw||1.5,color:ind.color}]);
-        try{sr.applyOptions({lineWidth:Math.min(8,(ind.lw||1.5)+3),color:ind.color});}catch(_){}
+        _ffHi.push([sr,{lineWidth:look.lineWidth,color:look.color}]);
+        try{sr.applyOptions({lineWidth:Math.min(8,look.lineWidth+3),color:ind.color});}catch(_){}
       }else{                                  // 同视窗其余线：淡出
-        _ffHi.push([sr,{color:ind.color}]);
+        _ffHi.push([sr,{color:look.color}]);
         try{sr.applyOptions({color:hexRgba(ind.color,.08)});}catch(_){}
       }
     }
@@ -2413,7 +2440,7 @@ function ffRender(){
 
   // ══ 力量排行：列表式，支撑蓝底 / 压力红底 ══
   const lnOf=r=>{
-    const th=Math.max(1.5,Math.min(4,r.lw||1.5));
+    const th=Math.max(1.5,Math.min(5,r.type==='MA'?(r.lw||1.5)*MA_W_MUL+MA_W_ADD:(r.lw||1.5)));
     return `<i class="ff-ln" style="border-top:${th}px ${r.type==='MA'?'dashed':'solid'} ${r.color}"></i>`;
   };
   // 有效性文案：守住/击穿次数 + 百分比；反复被穿的线前面标 ⚠
