@@ -650,6 +650,7 @@ function snapshotSettings(){
     inds:sharedInds.map(i=>({...i})),
     rowH:rowHManual?rowH:null,
     mergeLines,
+    has1s:1,      // 标记：这份设置已经过「补回1s」处理
   };
 }
 function saveSettings(){
@@ -696,6 +697,8 @@ function applySettings(s){
   // 秒级只支持 1s（由成交合成）；旧设置里的 5s/15s 等一律剔除
   const okTF=tf=>typeof tf==='string'&&(tf==='1s'||!/s$/.test(tf));
   userTFs=(s.userTFs&&s.userTFs.filter(okTF).length)?s.userTFs.filter(okTF):[...BINANCE_TFS];
+  // 1s 曾因合约无秒级K线被移除，旧设置里的周期列表没有它 → 补回一次（之后你手动删掉就不再自动加）
+  if(!s.has1s&&!userTFs.includes('1s'))userTFs.unshift('1s');
   maToggle=s.maToggle?{tema:!!s.maToggle.tema,ma:!!s.maToggle.ma}:{tema:true,ma:false};
   sharedInds=(s.inds||[]).map(i=>({...i,id:uid()}));
   if(!sharedInds.length)sharedInds=buildIndsFromPeriods(PRESETS.default.emas,true);
@@ -1037,7 +1040,7 @@ function addCustomTF(){
   const val=inp.value.trim().toLowerCase().replace('mon','M');
   err.style.display='none';
   if(!val){err.textContent='请输入周期，如 2m';err.style.display='';return;}
-  if(!/^\d+[mhdw]$/.test(val)&&!/^\d+M$/.test(inp.value.trim())){err.textContent='格式不对，支持: 2m 8h 3d 2w 1M（秒级只有 1s）';err.style.display='';return;}
+  if(val!=='1s'&&!/^\d+[mhdw]$/.test(val)&&!/^\d+M$/.test(inp.value.trim())){err.textContent='格式不对，支持: 2m 8h 3d 2w 1M（秒级只有 1s）';err.style.display='';return;}
   const tf=/^\d+M$/.test(inp.value.trim())?inp.value.trim():val;
   if(userTFs.includes(tf)){err.textContent='该周期已存在';err.style.display='';return;}
   userTFs.push(tf);inp.value='';
