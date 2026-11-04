@@ -171,7 +171,33 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 #ff-body{flex:1;overflow-y:auto;min-height:0}
 #ff-body::-webkit-scrollbar{width:4px}
 #ff-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
-/* ── 波动区间结论（按力量前14条线归纳）── */
+/* ── 价位阶梯（现价上下所有指标线价位，由高到低）── */
+.ffl-box{max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:5px;background:var(--bg)}
+.ffl{display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;border-left:3px solid transparent;font-size:11px}
+.ffl.sell{background:rgba(239,83,80,.07)}
+.ffl.buy{background:rgba(41,98,255,.07)}
+.ffl:hover{filter:brightness(.93)}
+.ffl.pin{border-left-color:var(--text)}
+.ffl .ac{font-size:10px;font-weight:700;color:#fff;border-radius:2px;padding:0 3px;flex-shrink:0}
+.ffl.sell .ac{background:var(--red)}
+.ffl.buy .ac{background:var(--blue)}
+.ffl .px{font-size:12px;font-variant-numeric:tabular-nums;width:62px;text-align:right;flex-shrink:0}
+.ffl.sell .px{color:var(--red)}
+.ffl.buy .px{color:var(--blue)}
+.ffl .dv{font-size:10px;color:var(--text2);width:46px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+.ffl .tfb{font-size:10px;font-weight:700;background:var(--bg3);border-radius:2px;padding:0 4px;min-width:28px;text-align:center;flex-shrink:0}
+.ffl .ff-ln{width:20px;flex-shrink:0}
+.ffl .nm{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.ffl .cs{font-size:9px;font-weight:700;color:#fff;background:var(--blue);border-radius:3px;padding:0 3px;flex-shrink:0}
+.ffl .br{flex:1;min-width:16px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.ffl .br i{display:block;height:100%;border-radius:3px}
+.ffl.sell .br i{background:var(--red)}
+.ffl.buy .br i{background:var(--blue)}
+.ffl .sc{font-size:11px;font-weight:700;width:24px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+.ffl-now{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg2);position:sticky;top:0;bottom:0;z-index:1;font-size:11px}
+.ffl-now i{flex:1;height:2px;background:var(--text)}
+.ffl-now b{font-size:12px;font-variant-numeric:tabular-nums}
+/* ── 旧版结论样式（保留供标题复用）── */
 #ff-concl{padding:9px 10px 4px;display:flex;flex-direction:column;gap:7px}
 .ffc-hd{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.4px}
 .ffc{border:1px solid var(--border);border-radius:5px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
@@ -327,7 +353,7 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
   <button class="row-btn" id="sync-btn" onclick="toggleSyncLock()" title="锁定后：拖动任一视窗，其他视窗自动以相同时刻K线对齐到各自中心">🔗锁定</button>
   <button class="row-btn" id="jump-btn" onclick="openJumpPop(this)" title="输入时间，所有视窗同步跳转到该历史时刻">🕐跳转</button>
   <button class="row-btn" id="alert-btn" onclick="openAlertPop(this)" title="振幅预警设置">🔔预警</button>
-  <button class="row-btn" id="ff-btn" onclick="toggleFF()" title="周期力场：统计全部16个周期的均线支撑/压力">⚡力场</button>
+  <button class="row-btn" id="ff-btn" onclick="toggleFF()" title="周期力场：统计全部15个周期的均线支撑/压力">⚡力场</button>
   <button class="row-btn" onclick="openPresetModal(loadSavedSettings())" title="界面预设">界面</button>
 </div>
 
@@ -449,13 +475,6 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
         </div>
         <div class="ffp-hint" id="ff-cons-hint">多个周期其实是同一根线（等效线）合并后，力量比单根线更大。
           按合并条数取对数加成，越多加得越慢。需在 ⧉ 里开启「合并计分」。</div>
-        <div class="ffp-row">
-          <span class="lb">共振箱宽</span>
-          <input type="range" id="ff-bin" min="0" max="150" step="1" oninput="ffSetBin(this.value)">
-          <span class="vv" id="ff-bin-v">0.20%</span>
-        </div>
-        <div class="ffp-hint">结论里把价位相差在此范围内的线并成一个价区、分数相加。
-          调到 <b>0 = 完全不合并</b>，只认力量最强的单条线；调大→更容易聚成大簇。</div>
         <div style="display:flex;gap:14px">
           <label class="ffp-chk"><input type="checkbox" id="ff-utema" onchange="ffSetUse('useTema',this.checked)"><span>统计 TEMA</span></label>
           <label class="ffp-chk"><input type="checkbox" id="ff-uma" onchange="ffSetUse('useMa',this.checked)"><span>统计 MA</span></label>
@@ -553,11 +572,17 @@ body{background:var(--bg);color:var(--text);font-family:'Trebuchet MS',-apple-sy
 // 唯一数据源：币安 U本位永续合约 BTCUSDT（即 binance.com/zh-CN/futures/BTCUSDT）
 const SYM='BTCUSDT', FAPI='https://fapi.binance.com/fapi/v1';
 const klineBase=()=>FAPI;
-const klineWs=tf=>`wss://fstream.binance.com/ws/btcusdt@kline_${tf}`;
+// ★币安 2026-04-23 起合约 WebSocket 必须带路由路径，老地址(/ws、/stream)收不到K线和行情：
+//   /market = K线、ticker、标记价格等常规行情      /public = 深度等高频行情
+//   成交流(aggTrade)两边都订阅、按成交编号去重，哪边有数据就用哪边
+const FWS='wss://fstream.binance.com';
+const klineWs=tf=>`${FWS}/market/ws/btcusdt@kline_${tf}`;
 const curPrice=()=>livePrice;
 
-// 币安合约支持的全部K线周期（合约没有1s；用户可在⏱+菜单里增删）
-const BINANCE_TFS=['1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
+// 币安合约支持的全部K线周期（用户可在⏱+菜单里增删）
+// 注意：币安合约接口本身没有 1s K线，这里的 1s 是用合约逐笔成交(aggTrade)现场合成的，
+//       只能回补最近约十几分钟，之后随页面开着不断累积
+const BINANCE_TFS=['1s','1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
 
 // 版本号：每次发布新版把这个数字+1，老用户刷新时会弹出「恢复上次设置/选默认界面」
 const APP_VERSION='3';
@@ -668,8 +693,8 @@ function applyPreset(key){
 
 // 恢复一份已保存的界面快照（「恢复上次设置」按钮走这里）
 function applySettings(s){
-  // 合约没有秒级K线：旧设置里的 1s 等一律剔除
-  const okTF=tf=>typeof tf==='string'&&!/s$/.test(tf);
+  // 秒级只支持 1s（由成交合成）；旧设置里的 5s/15s 等一律剔除
+  const okTF=tf=>typeof tf==='string'&&(tf==='1s'||!/s$/.test(tf));
   userTFs=(s.userTFs&&s.userTFs.filter(okTF).length)?s.userTFs.filter(okTF):[...BINANCE_TFS];
   maToggle=s.maToggle?{tema:!!s.maToggle.tema,ma:!!s.maToggle.ma}:{tema:true,ma:false};
   sharedInds=(s.inds||[]).map(i=>({...i,id:uid()}));
@@ -829,7 +854,40 @@ function indLabel(ind){
 // 想改首屏历史长度就增减第二次请求，往左拖会自动继续加载更早的
 // ══════════════════════════════════════════════
 const pk=k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]});
+// ── 1s：用合约逐笔成交(aggTrade)合成秒级K线 ──
+// AGG_PAGES=回补页数(每页1000笔，行情活跃时一页约十几秒~一分钟)；1S_MAX=最多保留根数
+const AGG_PAGES=15, S1_MAX=7200;
+function aggToSecCandles(trades,prev){
+  const out=[];let cur=prev?{...prev}:null;
+  for(const t of trades){
+    const sec=Math.floor(t.T/1000),px=+t.p,q=+t.q;
+    if(cur&&sec===cur.time){cur.high=Math.max(cur.high,px);cur.low=Math.min(cur.low,px);cur.close=px;cur.volume+=q;continue;}
+    if(cur&&sec<cur.time)continue;                          // 乱序的旧成交丢弃
+    if(cur){
+      out.push(cur);
+      // 没有成交的秒补一根平K（开高低收=上一秒收盘，量0），保持时间轴连续
+      for(let x=cur.time+1;x<sec&&sec-cur.time<=300;x++)out.push({time:x,open:cur.close,high:cur.close,low:cur.close,close:cur.close,volume:0});
+    }
+    cur={time:sec,open:px,high:px,low:px,close:px,volume:q};
+  }
+  if(cur)out.push(cur);
+  return out;
+}
+async function fetchSecCandles(){
+  const r=await fetch(`${FAPI}/aggTrades?symbol=${SYM}&limit=1000`);
+  const last=await r.json();
+  if(!Array.isArray(last)||!last.length)return[];
+  const a0=last[0].a;
+  const pages=await Promise.all(Array.from({length:AGG_PAGES-1},(_,i)=>
+    fetch(`${FAPI}/aggTrades?symbol=${SYM}&limit=1000&fromId=${Math.max(0,a0-1000*(AGG_PAGES-1-i))}`)
+      .then(x=>x.json()).catch(()=>[])));
+  const seen=new Set(),all=[];
+  for(const t of [...pages.flat(),...last]){if(t&&t.a!=null&&!seen.has(t.a)){seen.add(t.a);all.push(t);}}
+  all.sort((x,y)=>x.a-y.a);
+  return aggToSecCandles(all).slice(-S1_MAX);
+}
 async function fetchCandles(tf){
+  if(tf==='1s')return fetchSecCandles();
   const r1=await fetch(`${klineBase(tf)}/klines?symbol=${SYM}&interval=${tf}&limit=1000`);
   const d1=await r1.json();const c1=d1.map(pk);
   try{
@@ -979,7 +1037,7 @@ function addCustomTF(){
   const val=inp.value.trim().toLowerCase().replace('mon','M');
   err.style.display='none';
   if(!val){err.textContent='请输入周期，如 2m';err.style.display='';return;}
-  if(!/^\d+[mhdw]$/.test(val)&&!/^\d+M$/.test(inp.value.trim())){err.textContent='格式不对，支持: 2m 8h 3d 2w 1M（合约无秒级）';err.style.display='';return;}
+  if(!/^\d+[mhdw]$/.test(val)&&!/^\d+M$/.test(inp.value.trim())){err.textContent='格式不对，支持: 2m 8h 3d 2w 1M（秒级只有 1s）';err.style.display='';return;}
   const tf=/^\d+M$/.test(inp.value.trim())?inp.value.trim():val;
   if(userTFs.includes(tf)){err.textContent='该周期已存在';err.style.display='';return;}
   userTFs.push(tf);inp.value='';
@@ -1152,7 +1210,7 @@ async function loadPanel(pi){
       //   rightOffset:12   最新K线右侧留12根的空隙（避开价格轴和VPVR）
       //   barSpacing:2     默认每根K线占2px（=缩到最小）；改大=默认更宽
       //   minBarSpacing:1  滚轮能缩到的极限
-      timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:false,rightOffset:12,barSpacing:2,minBarSpacing:1,tickMarkFormatter:cnTick},
+      timeScale:{borderColor:'#d1d4dc',timeVisible:true,secondsVisible:p.tf==='1s',rightOffset:12,barSpacing:2,minBarSpacing:1,tickMarkFormatter:cnTick},
       handleScroll:true,handleScale:true,
     });
     p.candleSeries=p.chart.addCandlestickSeries({priceFormat:{type:'price',precision:1,minMove:0.1},upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
@@ -1291,6 +1349,7 @@ function redrawAllPanels(){panels.forEach((_,i)=>drawAllInds(i));}
 async function loadMoreHistory(pi){
   const p=panels[pi];
   if(p.loadingMore||p.noMore||!p.candles?.length)return;
+  if(p.tf==='1s'){p.noMore=true;return;}   // 1s 是现场合成的，没有更早的历史可取
   p.loadingMore=true;
   try{
     const oldest=p.candles[0];
@@ -1499,6 +1558,7 @@ function syncFromPanel(srcPi){
 async function jumpToTime(pi,t){
   const p=panels[pi];
   if(!p||!p.chart)return;
+  if(p.tf==='1s')return;                   // 1s 无远程历史，不跳转
   if(p._jumping){p._jumpAgain=t;return;}   // 已在跳转中：记下最新目标，完成后再跳
   p._jumping=true;
   try{
@@ -1709,7 +1769,30 @@ function onCross(pi,param){
 function subKline(pi){
   const p=panels[pi];let retry=1000;
   const gen=++p.wsGen;                 // 本次订阅的代号
+  if(p.tf==='1s')return subSecKline(pi,gen);
   const url=klineWs(p.tf);
+  // 兜底：WebSocket 超过8秒没推数据（被墙/币安改地址等）→ 每3秒用 REST 拉最新2根K线
+  let lastMsg=Date.now(), polling=false;
+  const poll=setInterval(async()=>{
+    if(p.wsGen!==gen){clearInterval(poll);return;}
+    if(Date.now()-lastMsg<8000||polling||p.histMode||!p.candles?.length)return;
+    polling=true;
+    try{
+      const r=await fetch(`${FAPI}/klines?symbol=${SYM}&interval=${p.tf}&limit=2`);
+      const d=(await r.json()).map(pk);
+      if(p.wsGen!==gen)return;
+      let closed=false;
+      for(const c of d){
+        const last=p.candles[p.candles.length-1];
+        if(last&&last.time===c.time)p.candles[p.candles.length-1]=c;
+        else if(!last||c.time>last.time){p.candles.push(c);closed=true;}
+        else continue;
+        p.candleSeries?.update(c);
+      }
+      if(closed)drawAllInds(pi);
+      updatePP(pi);schedVPVR(pi);
+    }catch(_){}finally{polling=false;}
+  },3000);
   function conn(){
     if(p.wsGen!==gen)return;           // 已被新订阅/关闭淘汰 → 不再建立连接
     const ws=new WebSocket(url);p.ws=ws;
@@ -1724,7 +1807,7 @@ function subKline(pi){
         else if(!last||c.time>last.time)p.candles.push(c);
         if(p.candleSeries)p.candleSeries.update(c);
         if(k.x)drawAllInds(pi);
-        updatePP(pi);schedVPVR(pi);retry=1000;
+        updatePP(pi);schedVPVR(pi);retry=1000;lastMsg=Date.now();
       }catch(_){}
     };
     // 只有代号仍有效时才自动重连（意外断线）；主动关闭不会走到重连
@@ -1732,6 +1815,31 @@ function subKline(pi){
     ws.onerror=()=>ws.close();
   }
   conn();
+}
+
+// 1s 视窗：直接挂在顶栏的成交总线上（顶栏已连着合约逐笔成交），现场拼秒级K线
+// 指标重算较耗时 → 最多每3秒重算一次（K线本身每笔成交都实时更新）
+const tradeSubs=new Set();
+function subSecKline(pi,gen){
+  const p=panels[pi];let lastInd=0;
+  const fn=t=>{
+    if(p.wsGen!==gen){tradeSubs.delete(fn);return;}   // 视窗已关闭/换周期 → 自动退订
+    if(p.histMode||!p.candles)return;
+    const last=p.candles[p.candles.length-1];
+    const add=aggToSecCandles([t],last);           // 第一根=更新后的最后一根，其余=新增
+    if(!add.length)return;
+    if(last&&add[0].time===last.time)p.candles[p.candles.length-1]=add.shift();
+    const upd=p.candles[p.candles.length-1];
+    for(const c of add)p.candles.push(c);
+    if(p.candleSeries){p.candleSeries.update(upd);for(const c of add)p.candleSeries.update(c);}
+    if(p.candles.length>S1_MAX+600){                 // 太长就裁掉最旧的，整体重设
+      p.candles=p.candles.slice(-S1_MAX);p.candleSeries?.setData(p.candles);lastInd=0;
+    }
+    const now=Date.now();
+    if(now-lastInd>3000){lastInd=now;drawAllInds(pi);}
+    updatePP(pi);schedVPVR(pi);
+  };
+  tradeSubs.add(fn);
 }
 
 // 统一的视窗WebSocket关闭入口：代号+1使旧连接彻底作废，再关闭
@@ -1744,7 +1852,7 @@ function closePanelWS(p){
 //   aggTrade   = 每笔成交，刷新最新价（和币安App一样实时）
 //   miniTicker = 每秒一次的24小时汇总（涨跌幅/高/低/量）
 // ══════════════════════════════════════════════
-const MK={last:null,o:null,h:null,l:null,v:null};
+const MK={last:null,o:null,h:null,l:null,v:null,at:0,tk:0};   // at/tk=最近一次收到成交/汇总的时刻
 const fmtPx=v=>v==null?'--':v.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
 let _hdrT=null;
 function schedHeader(){if(!_hdrT)_hdrT=setTimeout(()=>{_hdrT=null;renderHeader();},80);}  // 节流 80ms
@@ -1757,26 +1865,53 @@ function renderHeader(){
   }
   if(MK.h!=null){$('shi').textContent=fmtPx(MK.h);$('slo').textContent=fmtPx(MK.l);$('svol').textContent=fmtV(MK.v);}
 }
+let lastAggId=-1;
+function onAggTrade(d){
+  if(d.a!=null){if(d.a<=lastAggId)return;lastAggId=d.a;}   // 两路连接收到同一笔成交 → 只算一次
+  MK.last=+d.p;MK.at=Date.now();
+  for(const fn of tradeSubs)fn({a:d.a,p:d.p,q:d.q,T:d.T});
+}
+function tickerTick(){
+  livePrice=MK.last;
+  schedHeader();
+  try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
+}
 function startTicker(){
-  const url='wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@miniTicker';
-  let retry=1000;
-  function conn(){
-    const ws=new WebSocket(url);
-    ws.onmessage=evt=>{
-      try{
-        const msg=JSON.parse(evt.data), d=msg.data||msg, st=msg.stream||'';
-        if(st.includes('aggTrade')||d.e==='aggTrade')MK.last=+d.p;
-        else{MK.o=+d.o;MK.h=+d.h;MK.l=+d.l;MK.v=+d.v;if(MK.last==null)MK.last=+d.c;}  // 汇总流只在还没收到成交时兜底给价
-        livePrice=MK.last;
-        schedHeader();
-        try{ffScheduleRender();}catch(_){}   // 力场出错不影响行情栏
-        retry=1000;
-      }catch(_){}
-    };
-    ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
-    ws.onerror=()=>ws.close();
-  }
-  conn();
+  const open=(url)=>{
+    let retry=1000;
+    (function conn(){
+      const ws=new WebSocket(url);
+      ws.onmessage=evt=>{
+        try{
+          const msg=JSON.parse(evt.data), d=msg.data||msg, st=msg.stream||'';
+          if(st.includes('aggTrade')||d.e==='aggTrade')onAggTrade(d);
+          else if(d.e==='24hrMiniTicker'||st.includes('miniTicker')){
+            MK.o=+d.o;MK.h=+d.h;MK.l=+d.l;MK.v=+d.v;MK.tk=Date.now();
+            if(MK.last==null||Date.now()-(MK.at||0)>3000)MK.last=+d.c;   // 成交流没数据时用汇总价兜底
+          }else return;
+          tickerTick();retry=1000;
+        }catch(_){}
+      };
+      ws.onclose=()=>setTimeout(conn,retry=Math.min(retry*2,16000));
+      ws.onerror=()=>ws.close();
+    })();
+  };
+  open(`${FWS}/market/stream?streams=btcusdt@aggTrade/btcusdt@miniTicker`);
+  open(`${FWS}/public/ws/btcusdt@aggTrade`);
+  // 兜底：两路 WebSocket 都超过5秒没数据 → 每2秒用 REST 拉一次24小时行情
+  let busy=false;
+  setInterval(async()=>{
+    if(busy||Date.now()-Math.max(MK.at||0,MK.tk||0)<5000)return;
+    busy=true;
+    try{
+      const r=await fetch(`${FAPI}/ticker/24hr?symbol=${SYM}`);const d=await r.json();
+      if(d&&d.lastPrice){
+        MK.o=+d.openPrice;MK.h=+d.highPrice;MK.l=+d.lowPrice;MK.v=+d.volume;MK.last=+d.lastPrice;
+        for(const fn of tradeSubs)fn({a:null,p:d.lastPrice,q:'0',T:Date.now()});   // 1s视窗也跟着动
+        tickerTick();
+      }
+    }catch(_){}finally{busy=false;}
+  },2000);
 }
 
 async function fetchFR(){try{const r=await fetch(`${FAPI}/premiumIndex?symbol=${SYM}`);const d=await r.json();const fr=+d.lastFundingRate*100;const el=document.getElementById('sfr');el.textContent=(fr>=0?'+':'')+fr.toFixed(4)+'%';el.style.color=fr>=0?'var(--green)':'var(--red)';}catch(_){}}
@@ -2078,7 +2213,7 @@ async function checkAmplitude(){
 
 // ══════════════════════════════════════════════
 // ⚡ 周期力场
-// 统计【全部16个周期】×【顶栏当前的均线参数】×【TEMA, MA】的
+// 统计【全部15个周期】×【顶栏当前的均线参数】×【TEMA, MA】的
 // 均线此刻位置，按三项权重算出它对现价的支撑/压力强度，
 // 再把相近价位的线合并成「共振区」。
 //
@@ -2103,11 +2238,11 @@ async function checkAmplitude(){
 //   σ 默认由「持仓时长」自动推导 = 过去约120个该时长窗口内
 //     BTC 涨跌幅绝对值的中位数，市况变化时自动跟随（可手动锁定）
 //
-// 性能：均线值每3分钟重算一次（错峰拉取16个周期各2000根K线并缓存），
+// 性能：均线值每3分钟重算一次（错峰拉取15个周期各2000根K线并缓存），
 //       距离与分数跟着实时价刷新（仅几百次简单运算，几乎零成本）。
 // ══════════════════════════════════════════════
 const FF_KEY='btcll_ff_v2';
-const FF_TFS=[...BINANCE_TFS];          // 全部16个周期，不限于已打开的视窗
+const FF_TFS=BINANCE_TFS.filter(t=>t!=="1s");  // 全部15个周期(1s只有十几分钟数据，不参与)，不限于已打开的视窗
 const FF_FETCH_MS=180000;               // ★均线值重算间隔(ms)
 const FF_STAGGER_MS=260;                // ★各周期错峰拉取间隔(ms)
 const FF_WIN=400;                       // ★统计趋势线有效性时回看多少根K线
@@ -2336,22 +2471,9 @@ function ffScoreAll(price){
 
 // ── 共振分箱：相近价位的线合并求和 ──
 // 把价位相近的线并成一个价区；箱宽=0 表示不合并（每条线各自成区）
-function ffBin(rows){
-  const bw=ffCfg.bin, m=new Map();
-  let seq=0;
-  for(const r of rows){
-    const k=bw>0?Math.round(r.rel/bw):('x'+(seq++));
-    let b=m.get(k);
-    if(!b){b={k,rel:bw>0?k*bw:r.rel,total:0,items:[]};m.set(k,b);}
-    b.total+=r.score;b.items.push(r);
-  }
-  for(const b of m.values())b.items.sort((x,y)=>y.score-x.score);
-  return [...m.values()];
-}
-
 // ── 点亮图表上的均线 ──
 // 固定点亮(点击,可多条) 与 临时点亮(鼠标划过) 并存；
-// 只有开着该周期视窗的面板才有线可点亮（力场统计全部16个周期）
+// 只有开着该周期视窗的面板才有线可点亮（力场统计全部15个周期）
 let _ffHi=[];                       // [series, 原始options] 便于还原
 let ffPinned=new Set();             // 固定点亮的线
 let ffHover=null;                   // 当前划过的线
@@ -2436,51 +2558,11 @@ function ffRender(){
   }
 
   const rows=ffScoreAll(price);
-  const TOP=rows.slice(0,14);                 // ★结论与榜单都取力量前14
+  const TOP=rows.slice(0,14);                 // ★力量排行取前14
   ffRowByKey.clear();
   for(const r of TOP)ffRowByKey.set(ffKeyOf(r),r);
 
-  // ══ 波动区间结论：按周期分三档，各档给出支撑~压力的区间 ══
-  // 档内先按「共振箱宽」把价位相近的线并成一个价区（箱宽=0 则不合并），
-  // 再取分数最高的那个价区作为该档的支撑 / 压力
-  const BK=[{n:'短线',tip:'≤1h',max:3600},{n:'中线',tip:'2h–12h',max:43200},{n:'长线',tip:'≥1d',max:Infinity}];
-  let lastMax=0;
-  cc.innerHTML='<div class="ffc-hd">波动区间结论 · 取力量前 14 条线</div>'+BK.map(bk=>{
-    const lo=lastMax; lastMax=bk.max;
-    const mine=TOP.filter(r=>{const sec=tfToSec(r.tf);return sec>lo&&sec<=bk.max;});
-    if(!mine.length)return `<div class="ffc"><div class="ffc-t"><b>${bk.n}</b><span>${bk.tip}</span></div>`
-      +'<div class="ffc-na">前14名里没有该档周期的线</div></div>';
-    const pick=side=>{
-      const g=ffBin(mine.filter(side==='sup'?(r=>r.rel<=0):(r=>r.rel>0)));
-      if(!g.length)return null;
-      const b=g.sort((x,y)=>y.total-x.total)[0];
-      // 价区取分数加权均价，强度取区内合力
-      const px=b.items.reduce((a,i)=>a+i.value*i.score,0)/b.total;
-      return {px,total:b.total,n:b.items.length,
-              tag:b.items.slice(0,2).map(i=>`${i.tf}·${i.type==='MA'?'虚':'实'}${i.p}`).join(' + ')
-                  +(b.items.length>2?` +${b.items.length-2}`:'')};
-    };
-    const sp=pick('sup'), rs=pick('res');
-    const pct=v=>((v-price)/price*100);
-    return `<div class="ffc">`
-      +`<div class="ffc-t"><b>${bk.n}</b><span>${bk.tip}</span>`
-      +`<em>${mine.length} 条</em></div>`
-      +`<div class="ffc-rg">`
-      +(sp?`<span class="lo">${fmt(sp.px)}</span>`:'<span class="ffc-na">无支撑</span>')
-      +`<span class="dash">─</span>`
-      +(rs?`<span class="hi">${fmt(rs.px)}</span>`:'<span class="ffc-na">无压力</span>')
-      +`</div>`
-      +`<div class="ffc-pc">`
-      +(sp?`${pct(sp.px).toFixed(2)}%`:'—')+' ~ '+(rs?`+${pct(rs.px).toFixed(2)}%`:'—')
-      +(sp&&rs?`　区间宽 ${((rs.px-sp.px)/price*100).toFixed(2)}%`:'')+`</div>`
-      +`<div class="ffc-dt">`
-      +(sp?`支撑 ${escHtml(sp.tag)}（合力 ${sp.total.toFixed(0)}）`:'')
-      +(sp&&rs?'<br>':'')
-      +(rs?`压力 ${escHtml(rs.tag)}（合力 ${rs.total.toFixed(0)}）`:'')
-      +`</div></div>`;
-  }).join('');
-
-  // ══ 力量排行：列表式，支撑蓝底 / 压力红底 ══
+  // ══ 共用的小工具：线型图例 / 有效性 / 多周期共识 / 失效警示 ══
   const lnOf=r=>{
     const th=Math.max(1.5,Math.min(5,r.type==='MA'?(r.lw||1.5)*MA_W_MUL+MA_W_ADD:(r.lw||1.5)));
     return `<i class="ff-ln" style="border-top:${th}px ${r.type==='MA'?'dashed':'solid'} ${r.color}"></i>`;
@@ -2493,6 +2575,42 @@ function ffRender(){
   const csTxt=r=>(r.wc>1&&r.members)?`多周期共识 ×${r.wc.toFixed(2)}（${r.gn}条同一根线：${r.members.join(' ＝ ')}）`:'';
   const csTag=r=>(r.wc>1)?`<span class="cs" title="${escHtml(csTxt(r))}">×${r.gn}</span>`:'';
   const warn=r=>(r.respect??.5)<0.35?'<span title="价格反复穿越，此线作为支撑/压力基本失效" style="color:var(--orange)">⚠</span>':'';
+
+  // ══ 价位阶梯：现价上下 ±30% 以内的所有指标线价位，由高到低 ══
+  // 上方每一档 = 卖点（压力），下方每一档 = 买点（支撑）
+  // 每行的条长与「力」= 该线力量分，越强越值得挂单
+  const LAD_MAX=30;                                  // ★偏离现价超过此百分比的线太远，不列
+  const lad=rows.filter(r=>Math.abs(r.rel)<=LAD_MAX&&r.score>0).sort((a,b)=>b.value-a.value);
+  for(const r of lad)ffRowByKey.set(ffKeyOf(r),r);
+  const lmax=Math.max(1,...lad.map(r=>r.score));
+  const above=lad.filter(r=>r.rel>0), below=lad.filter(r=>r.rel<=0);
+  const ladRow=r=>{
+    const buy=r.rel<=0, k=ffKeyOf(r), w=r.score/lmax;
+    return `<div class="ffl ${buy?'buy':'sell'}${ffPinned.has(k)?' pin':''}" data-k="${k}"`
+      +` title="${escHtml(`${buy?'买点（支撑）':'卖点（压力）'}　${r.tf} ${r.type}(${r.p})　${fmt(r.value)}　力量 ${r.score.toFixed(1)}\n${rpTxt(r)}${csTxt(r)?'\n'+csTxt(r):''}\n点击可固定点亮`)}"`
+      +`${r.conf?'':' style="opacity:.6"'}>`
+      +`<span class="ac">${buy?'买':'卖'}</span>`
+      +`<span class="px"${w>=.5?' style="font-weight:700"':''}>${fmt(r.value)}</span>`
+      +`<span class="dv">${r.rel>=0?'+':''}${r.rel.toFixed(2)}%</span>`
+      +`<span class="tfb">${r.tf}</span>`+lnOf(r)+`<span class="nm">${r.p}</span>`+csTag(r)+warn(r)
+      +`<span class="br"><i style="width:${(w*100).toFixed(0)}%"></i></span>`
+      +`<span class="sc">${r.score<10?r.score.toFixed(1):r.score.toFixed(0)}</span></div>`;
+  };
+  const oldBox=document.getElementById('ff-lad'), oldTop=oldBox?oldBox.scrollTop:null;
+  cc.innerHTML=`<div class="ffc-hd">价位阶梯 · 上方 ${above.length} 个卖点 / 下方 ${below.length} 个买点`
+    +`<span style="font-weight:400">　仅列偏离 ±${LAD_MAX}% 以内</span></div>`
+    +'<div class="ffl-box" id="ff-lad">'
+    +(above.length?above.map(ladRow).join(''):'<div class="ffc-na">上方 30% 内没有指标线</div>')
+    +`<div class="ffl-now" id="ff-lad-now"><span>现价</span><i></i><b>${fmt(price)}</b></div>`
+    +(below.length?below.map(ladRow).join(''):'<div class="ffc-na">下方 30% 内没有指标线</div>')
+    +'</div>';
+  {
+    const box=document.getElementById('ff-lad'), now=document.getElementById('ff-lad-now');
+    if(box&&oldTop!=null)box.scrollTop=oldTop;                 // 刷新时保持你滚到的位置
+    else if(box&&now)box.scrollTop=now.offsetTop-box.clientHeight/2;  // 首次打开：现价居中
+  }
+
+  // ══ 力量排行：列表式，支撑蓝底 / 压力红底 ══
   const allOn=TOP.length>0&&TOP.every(r=>ffPinned.has(ffKeyOf(r)));
   rk.innerHTML='<div class="ff-lg"><span>力量排行</span>'
     +'<span><i style="border-top:3px solid var(--text2)"></i>TEMA</span>'
@@ -2506,12 +2624,12 @@ function ffRender(){
         +`<span class="tfb">${r.tf}</span>`+lnOf(r)
         +`<span class="nm">${r.p}</span>`+csTag(r)+warn(r)
         +`<span class="vl">${(r.rel>=0?'+':'')+r.rel.toFixed(1)}%</span>`
-        +`<span class="sc">${r.score.toFixed(0)}</span></div>`;
+        +`<span class="sc">${r.score<10?r.score.toFixed(1):r.score.toFixed(0)}</span></div>`;
     }).join('')
     +'<div class="ff-read" id="ff-read">划过＝临时点亮　点击＝固定点亮（再点取消）</div>';
 
   // 交互：悬停临时点亮 / 点击固定点亮 / 一键全部
-  rk.querySelectorAll('.ff-rk').forEach(el=>{
+  [...rk.querySelectorAll('.ff-rk'),...cc.querySelectorAll('.ffl')].forEach(el=>{
     const k=el.dataset.k;
     el.addEventListener('mouseenter',()=>{
       ffHover=k;ffApplyHighlight();
@@ -2527,11 +2645,13 @@ function ffRender(){
       ffApplyHighlight();ffRender();
     });
   });
-  rk.addEventListener('mouseleave',()=>{
+  const leave=()=>{
     ffHover=null;ffApplyHighlight();
     const rd=document.getElementById('ff-read');
     if(rd)rd.textContent='划过＝临时点亮　点击＝固定点亮（再点取消）';
-  });
+  };
+  rk.addEventListener('mouseleave',leave);
+  document.getElementById('ff-lad')?.addEventListener('mouseleave',leave);
   document.getElementById('ff-all')?.addEventListener('click',()=>{
     if(allOn)ffPinned.clear();
     else TOP.forEach(r=>ffPinned.add(ffKeyOf(r)));
@@ -2597,8 +2717,6 @@ function ffSyncPop(){
   g('ff-cons-v').textContent=Math.round((ffCfg.consensus??.7)*100)+'%';ffConsHint();
   g('ff-resp').value=Math.round((ffCfg.respectW??1)*100);
   g('ff-resp-v').textContent=Math.round((ffCfg.respectW??1)*100)+'%';
-  g('ff-bin').value=Math.round(ffCfg.bin*100);
-  g('ff-bin-v').textContent=ffCfg.bin>0?ffCfg.bin.toFixed(2)+'%':'0（不合并）';
   g('ff-utema').checked=ffCfg.useTema; g('ff-uma').checked=ffCfg.useMa;
   document.querySelectorAll('#ff-presets button').forEach(b=>b.classList.toggle('on',b.dataset.k===ffCfg.preset));
 }
@@ -2648,12 +2766,6 @@ function ffConsHint(){
 function ffSetResp(v){
   ffCfg.respectW=Math.max(0,Math.min(1,(parseInt(v)||0)/100));
   document.getElementById('ff-resp-v').textContent=Math.round(ffCfg.respectW*100)+'%';
-  ffSaveCfg();ffRender();
-}
-function ffSetBin(v){
-  ffCfg.bin=Math.max(0,(parseInt(v)||0)/100);
-  document.getElementById('ff-bin-v').textContent=
-    ffCfg.bin>0?ffCfg.bin.toFixed(2)+'%':'0（不合并）';
   ffSaveCfg();ffRender();
 }
 function ffSetUse(k,v){ffCfg[k]=v;ffSaveCfg();ffRecomputeLines();ffRender();}
